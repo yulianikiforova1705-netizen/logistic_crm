@@ -3,13 +3,15 @@
 const express = require('express');
 // Подключаем наш файл конфигурации
 const config = require('./config'); 
+const path = require('path');
 
 const app = express();
 const PORT = 3000;
 
 // Разрешаем серверу понимать формат JSON (пригодится для передачи данных)
 app.use(express.json());
-
+// Раздаем визуальную часть системы из папки frontend
+app.use(express.static(path.join(__dirname, '../frontend')));
 // Создаем наш первый тестовый маршрут (API endpoint)
 app.get('/api/status', (req, res) => {
     // Сервер будет отвечать информацией о системе

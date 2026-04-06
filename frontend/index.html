@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Логистика CRM</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background-color: #f4f7f6; color: #333; }
+        .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 1200px; margin: auto; }
+        h1 { border-bottom: 2px solid #007bff; padding-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #007bff; color: white; }
+        .status-yellow { background-color: #fff3cd; color: #856404; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Заявки на перевозку</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>Дата</th>
+                    <th>Клиент</th>
+                    <th>Подрядчик</th>
+                    <th>Маршрут</th>
+                    <th>Транспорт</th>
+                    <th>Статус оплаты</th>
+                </tr>
+            </thead>
+            <tbody id="orders-table-body">
+                </tbody>
+        </table>
+    </div>
+
+    <script>
+        // Стучимся на наш сервер за заявками
+        fetch('/api/orders')
+            .then(response => response.json())
+            .then(data => {
+                const tableBody = document.getElementById('orders-table-body');
+                // Перебираем все полученные заявки и создаем для каждой строку таблицы
+                data.data.forEach(order => {
+                    const row = `<tr>
+                        <td>${order.orderDate}</td>
+                        <td><strong>${order.clientName}</strong></td>
+                        <td>${order.contractorName}</td>
+                        <td>${order.route}</td>
+                        <td>${order.transportType}</td>
+                        <td><span class="status-yellow">${order.paymentStatus}</span></td>
+                    </tr>`;
+                    tableBody.innerHTML += row;
+                });
+            })
+            .catch(error => console.error('Ошибка загрузки данных:', error));
+    </script>
+</body>
+</html>
