@@ -23,7 +23,30 @@ app.get('/api/status', (req, res) => {
         }
     });
 });
+// Временная база данных заявок (MVP)
+const orders = [
+    {
+        id: 1,
+        orderDate: "2026-04-07",
+        clientName: "ООО МегаСтрой",
+        contractorName: "ИП Иванов А.А.",
+        route: "Москва - Санкт-Петербург",
+        transportType: "Тент 20т",
+        clientRate: 85000,
+        contractorRate: 70000,
+        currency: "RUB",
+        paymentStatus: "Ожидание" // Желтый индикатор
+    }
+];
 
+// Маршрут для получения списка заявок
+app.get('/api/orders', (req, res) => {
+    res.json({
+        status: "success",
+        totalOrders: orders.length,
+        data: orders
+    });
+});
 // Запускаем сервер
 app.listen(PORT, () => {
     console.log(`=================================`);
