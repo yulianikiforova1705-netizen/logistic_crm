@@ -8,10 +8,11 @@
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background-color: #f4f7f6; color: #333; }
         .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 1200px; margin: auto; }
         h1 { border-bottom: 2px solid #007bff; padding-bottom: 10px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
         th { background-color: #007bff; color: white; }
         .status-yellow { background-color: #fff3cd; color: #856404; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
+        .margin-positive { color: #28a745; font-weight: bold; } /* Зеленый цвет для прибыли */
     </style>
 </head>
 <body>
@@ -24,8 +25,10 @@
                     <th>Клиент</th>
                     <th>Подрядчик</th>
                     <th>Маршрут</th>
-                    <th>Транспорт</th>
-                    <th>Статус оплаты</th>
+                    <th>Статус</th>
+                    <th>Ставка клиента</th>
+                    <th>Ставка подрядчика</th>
+                    <th>Маржа (Прибыль)</th>
                 </tr>
             </thead>
             <tbody id="orders-table-body">
@@ -34,20 +37,24 @@
     </div>
 
     <script>
-        // Стучимся на наш сервер за заявками
         fetch('/api/orders')
             .then(response => response.json())
             .then(data => {
                 const tableBody = document.getElementById('orders-table-body');
-                // Перебираем все полученные заявки и создаем для каждой строку таблицы
+                
                 data.data.forEach(order => {
+                    // Высчитываем маржу (прибыль)
+                    const margin = order.clientRate - order.contractorRate;
+                    
                     const row = `<tr>
                         <td>${order.orderDate}</td>
                         <td><strong>${order.clientName}</strong></td>
                         <td>${order.contractorName}</td>
                         <td>${order.route}</td>
-                        <td>${order.transportType}</td>
                         <td><span class="status-yellow">${order.paymentStatus}</span></td>
+                        <td>${order.clientRate.toLocaleString()} ${order.currency}</td>
+                        <td>${order.contractorRate.toLocaleString()} ${order.currency}</td>
+                        <td class="margin-positive">${margin.toLocaleString()} ${order.currency}</td>
                     </tr>`;
                     tableBody.innerHTML += row;
                 });
