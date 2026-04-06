@@ -2,64 +2,62 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Логистика CRM</title>
+    <title>Логистика CRM - Yulia Nikiforova</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background-color: #f4f7f6; color: #333; }
-        .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 1200px; margin: auto; }
-        h1 { border-bottom: 2px solid #007bff; padding-bottom: 10px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
-        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-        th { background-color: #007bff; color: white; }
-        .status-yellow { background-color: #fff3cd; color: #856404; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
-        .margin-positive { color: #28a745; font-weight: bold; } /* Зеленый цвет для прибыли */
+        body { font-family: 'Segoe UI', sans-serif; padding: 20px; background-color: #f4f7f6; font-size: 13px; }
+        .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 1400px; margin: auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #007bff; color: white; position: sticky; top: 0; }
+        .status-sync { color: #28a745; font-weight: bold; font-size: 11px; }
+        .extra-box { font-size: 11px; color: #666; background: #eee; padding: 2px 5px; border-radius: 3px; display: block; margin-top: 2px; }
+        .margin-val { font-weight: bold; color: #28a745; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Заявки на перевозку</h1>
+        <h1>Мониторинг рейсов</h1>
         <table>
             <thead>
                 <tr>
-                    <th>Дата</th>
-                    <th>Клиент</th>
-                    <th>Подрядчик</th>
+                    <th>1С</th>
+                    <th>Даты (Заявка/Загр/Выгр)</th>
+                    <th>Клиент / Подрядчик</th>
+                    <th>Авто / Тип</th>
                     <th>Маршрут</th>
-                    <th>Статус</th>
-                    <th>Ставка клиента</th>
-                    <th>Ставка подрядчика</th>
-                    <th>Маржа (Прибыль)</th>
+                    <th>Ставки (Кл / Подр)</th>
+                    <th>Доп. расходы</th>
+                    <th>Маржа</th>
                 </tr>
             </thead>
-            <tbody id="orders-table-body">
-                </tbody>
+            <tbody id="orders-table-body"></tbody>
         </table>
     </div>
 
     <script>
         fetch('/api/orders')
-            .then(response => response.json())
+            .then(res => res.json())
             .then(data => {
                 const tableBody = document.getElementById('orders-table-body');
-                
                 data.data.forEach(order => {
-                    // Высчитываем маржу (прибыль)
-                    const margin = order.clientRate - order.contractorRate;
-                    
+                    // Считаем сумму доп. расходов
+                    const totalExtra = order.extraExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+                    // Считаем чистую маржу
+                    const finalMargin = order.clientRate - order.contractorRate - totalExtra;
+
                     const row = `<tr>
-                        <td>${order.orderDate}</td>
-                        <td><strong>${order.clientName}</strong></td>
-                        <td>${order.contractorName}</td>
+                        <td class="status-sync">${order.sync1C}</td>
+                        <td>${order.orderDate}<br>${order.loadDate}<br>${order.unloadDate}</td>
+                        <td><strong>${order.clientName}</strong><br><em>${order.contractorName}</em></td>
+                        <td>${order.carNumber}<br>${order.transportType}</td>
                         <td>${order.route}</td>
-                        <td><span class="status-yellow">${order.paymentStatus}</span></td>
-                        <td>${order.clientRate.toLocaleString()} ${order.currency}</td>
-                        <td>${order.contractorRate.toLocaleString()} ${order.currency}</td>
-                        <td class="margin-positive">${margin.toLocaleString()} ${order.currency}</td>
+                        <td>${order.clientRate.toLocaleString()} / ${order.contractorRate.toLocaleString()} ${order.currency}</td>
+                        <td>${order.extraExpenses.map(e => `<span class="extra-box">${e.category}: ${e.amount}</span>`).join('')}</td>
+                        <td class="margin-val">${finalMargin.toLocaleString()} ${order.currency}</td>
                     </tr>`;
                     tableBody.innerHTML += row;
                 });
-            })
-            .catch(error => console.error('Ошибка загрузки данных:', error));
+            });
     </script>
 </body>
 </html>

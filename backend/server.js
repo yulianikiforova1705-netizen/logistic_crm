@@ -25,19 +25,29 @@ app.get('/api/status', (req, res) => {
         }
     });
 });
-// Временная база данных заявок (MVP)
+// backend/server.js
+
+// Временная база данных с полным набором полей
 const orders = [
     {
         id: 1,
         orderDate: "2026-04-07",
+        loadDate: "2026-04-08",     // Дата загрузки
+        unloadDate: "2026-04-10",   // Дата выгрузки
         clientName: "ООО МегаСтрой",
         contractorName: "ИП Иванов А.А.",
-        route: "Москва - Санкт-Петербург",
+        carNumber: "А123БВ 777",    // Номер авто
+        route: "Москва - СПБ",
         transportType: "Тент 20т",
-        clientRate: 85000,
-        contractorRate: 70000,
+        clientRate: 100000,
+        contractorRate: 80000,
         currency: "RUB",
-        paymentStatus: "Ожидание" // Желтый индикатор
+        paymentStatus: "Ожидание",
+        sync1C: "Синхронизировано", // Статус коннекта с 1С
+        extraExpenses: [            // Блок доп. расходов
+            { category: "Простой", amount: 5000 },
+            { category: "Страховка", amount: 2000 }
+        ]
     }
 ];
 
