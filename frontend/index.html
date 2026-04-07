@@ -10,7 +10,7 @@
         .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 15px; }
         .form-group { display: flex; flex-direction: column; }
         .form-group label { font-weight: bold; margin-bottom: 4px; font-size: 12px; }
-        .form-group input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        .form-group input, .form-group select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
         button { background-color: #28a745; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
         
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
@@ -26,7 +26,14 @@
         .extra-box { font-size: 11px; color: #666; background: #eee; padding: 4px 6px; border-radius: 3px; display: block; margin-bottom: 4px; }
         .btn-small { background-color: #6c757d; padding: 4px 8px; font-size: 10px; margin-top: 5px; width: 100%; }
         .margin-val { font-weight: bold; color: #28a745; font-size: 14px; }
-        .margin-negative { color: #dc3545; } /* Красный цвет, если ушли в минус */
+        .margin-negative { color: #dc3545; }
+        
+        /* Стили для нового всплывающего окна (модалки) */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-box { background: white; padding: 25px; border-radius: 8px; width: 300px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .modal-box h3 { margin-top: 0; border-bottom: 2px solid #007bff; padding-bottom: 10px; }
+        .modal-btn-group { display: flex; justify-content: space-between; margin-top: 20px; }
+        .btn-cancel { background-color: #dc3545; }
     </style>
 </head>
 <body>
@@ -64,7 +71,35 @@
         </table>
     </div>
 
+    <div class="modal-overlay" id="expense-modal">
+        <div class="modal-box">
+            <h3>Добавить расход</h3>
+            <div class="form-group" style="margin-bottom: 10px;">
+                <label>Категория</label>
+                <select id="modal-category">
+                    <option value="Штраф">Штраф</option>
+                    <option value="Простой">Простой</option>
+                    <option value="Перегруз">Перегруз</option>
+                    <option value="Опоздание">Опоздание</option>
+                    <option value="Страховка">Страховка</option>
+                    <option value="Прочее">Прочее</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Сумма (руб)</label>
+                <input type="number" id="modal-amount" placeholder="Например: 5000">
+            </div>
+            <div class="modal-btn-group">
+                <button class="btn-cancel" onclick="closeExpenseModal()">Отмена</button>
+                <button onclick="submitExpense()">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
     <script>
+        // Переменная для запоминания, к какой заявке мы сейчас добавляем расход
+        let currentOrderIdForExpense = null;
+
         function getColorClass(status) {
             if(status === 'Оплачено') return 'status-green';
             if(status === 'Просрочка') return 'status-red';
@@ -79,17 +114,13 @@
                     tableBody.innerHTML = ''; 
 
                     data.data.forEach(order => {
-                        // Считаем все расходы
                         const totalExtra = order.extraExpenses.reduce((sum, exp) => sum + exp.amount, 0);
-                        // Вычитаем расходы из прибыли
                         const finalMargin = order.clientRate - order.contractorRate - totalExtra;
-                        // Если ушли в минус, красим в красный
                         const marginClass = finalMargin < 0 ? 'margin-negative' : 'margin-val';
                         const colorClass = getColorClass(order.paymentStatus);
 
-                        // Собираем список расходов
                         let expensesHtml = order.extraExpenses.map(e => `<span class="extra-box"><b>${e.category}:</b> ${e.amount}</span>`).join('');
-                        expensesHtml += `<button class="btn-small" onclick="addExpense(${order.id})">+ Добавить расход</button>`;
+                        expensesHtml += `<button class="btn-small" onclick="openExpenseModal(${order.id})">+ Добавить расход</button>`;
 
                         const row = `<tr>
                             <td>${order.orderDate}</td>
@@ -142,22 +173,36 @@
             }).then(() => loadOrders());
         }
 
-        // НОВАЯ ФУНКЦИЯ: Добавление расхода через всплывающие окна
-        function addExpense(orderId) {
-            const category = prompt("Введите категорию (например: Штраф, Простой, Страховка):");
-            if (!category) return; // Если нажали Отмена
-            
-            const amount = prompt("Введите сумму в рублях:");
-            if (!amount || isNaN(amount)) {
-                alert("Ошибка: введите корректное число!");
+        // --- ЛОГИКА НОВОГО ОКНА РАСХОДОВ ---
+
+        function openExpenseModal(orderId) {
+            currentOrderIdForExpense = orderId; // Запоминаем ID заявки
+            document.getElementById('modal-amount').value = ''; // Очищаем старую сумму
+            document.getElementById('expense-modal').style.display = 'flex'; // Показываем окно
+        }
+
+        function closeExpenseModal() {
+            document.getElementById('expense-modal').style.display = 'none'; // Прячем окно
+            currentOrderIdForExpense = null;
+        }
+
+        function submitExpense() {
+            const category = document.getElementById('modal-category').value;
+            const amount = document.getElementById('modal-amount').value;
+
+            if (!amount || amount <= 0) {
+                alert("Ошибка: введите корректную сумму!");
                 return;
             }
 
-            fetch(`/api/orders/${orderId}/expenses`, {
+            fetch(`/api/orders/${currentOrderIdForExpense}/expenses`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ category: category, amount: amount })
-            }).then(() => loadOrders()); // Перерисовываем таблицу для обновления маржи
+            }).then(() => {
+                closeExpenseModal(); // Закрываем окно
+                loadOrders(); // Перерисовываем таблицу с новыми цифрами
+            });
         }
     </script>
 </body>
