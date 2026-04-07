@@ -59,6 +59,37 @@ app.get('/api/orders', (req, res) => {
         data: orders
     });
 });
+// Маршрут для ДОБАВЛЕНИЯ новой заявки с формы
+app.post('/api/orders', (req, res) => {
+    // Формируем новую заявку из данных, которые прислал браузер
+    const newOrder = {
+        id: orders.length + 1,
+        orderDate: req.body.orderDate,
+        loadDate: req.body.loadDate || "Уточняется",
+        unloadDate: req.body.unloadDate || "Уточняется",
+        clientName: req.body.clientName,
+        contractorName: req.body.contractorName,
+        carNumber: req.body.carNumber || "Не назначен",
+        route: req.body.route,
+        transportType: req.body.transportType || "Стандарт",
+        clientRate: Number(req.body.clientRate), // Обязательно превращаем в число для математики
+        contractorRate: Number(req.body.contractorRate),
+        currency: "RUB",
+        paymentStatus: "Ожидание",
+        sync1C: "В очереди",
+        extraExpenses: [] // Пока без доп. расходов при создании
+    };
+
+    // Добавляем в нашу временную базу данных
+    orders.push(newOrder);
+
+    // Отправляем ответ, что всё прошло успешно
+    res.json({
+        status: "success",
+        message: "Заявка успешно добавлена!",
+        data: newOrder
+    });
+});
 // Запускаем сервер
 app.listen(PORT, () => {
     console.log(`=================================`);
