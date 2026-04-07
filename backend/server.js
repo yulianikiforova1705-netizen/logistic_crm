@@ -90,6 +90,21 @@ app.post('/api/orders', (req, res) => {
         data: newOrder
     });
 });
+// Маршрут для ИЗМЕНЕНИЯ статуса оплаты
+app.patch('/api/orders/:id/status', (req, res) => {
+    const orderId = parseInt(req.params.id); // Получаем ID заявки
+    const newStatus = req.body.status;       // Получаем новый статус
+
+    // Ищем заявку в нашей базе данных
+    const order = orders.find(o => o.id === orderId);
+    
+    if (order) {
+        order.paymentStatus = newStatus; // Обновляем статус
+        res.json({ status: "success", message: "Статус обновлен" });
+    } else {
+        res.status(404).json({ status: "error", message: "Заявка не найдена" });
+    }
+});
 // Запускаем сервер
 app.listen(PORT, () => {
     console.log(`=================================`);

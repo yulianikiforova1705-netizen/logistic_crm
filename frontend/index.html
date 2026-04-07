@@ -6,21 +6,23 @@
     <style>
         body { font-family: 'Segoe UI', sans-serif; padding: 20px; background-color: #f4f7f6; font-size: 13px; }
         .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 1400px; margin: auto; }
-        
-        /* Стили для нашей новой формы */
         .form-card { background: #eef2f5; padding: 15px; border-radius: 6px; margin-bottom: 20px; }
         .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 15px; }
         .form-group { display: flex; flex-direction: column; }
         .form-group label { font-weight: bold; margin-bottom: 4px; font-size: 12px; }
         .form-group input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
         button { background-color: #28a745; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        button:hover { background-color: #218838; }
-
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
         th { background-color: #007bff; color: white; position: sticky; top: 0; }
+        
+        /* Стили для светофора */
+        select.status-select { border: none; padding: 4px 8px; border-radius: 4px; font-weight: bold; cursor: pointer; outline: none; font-size: 12px; }
+        .status-yellow { background-color: #fff3cd; color: #856404; }
+        .status-green { background-color: #d4edda; color: #155724; }
+        .status-red { background-color: #f8d7da; color: #721c24; }
+        
         .status-sync { color: #28a745; font-weight: bold; font-size: 11px; }
-        .extra-box { font-size: 11px; color: #666; background: #eee; padding: 2px 5px; border-radius: 3px; display: block; margin-top: 2px; }
         .margin-val { font-weight: bold; color: #28a745; }
     </style>
 </head>
@@ -33,26 +35,24 @@
             <form id="add-order-form">
                 <div class="form-grid">
                     <div class="form-group"><label>Дата заявки</label><input type="date" id="f-date" required></div>
-                    <div class="form-group"><label>Клиент</label><input type="text" id="f-client" placeholder="Например: ООО Альфа" required></div>
-                    <div class="form-group"><label>Подрядчик</label><input type="text" id="f-contractor" placeholder="ИП Петров" required></div>
-                    <div class="form-group"><label>Маршрут</label><input type="text" id="f-route" placeholder="Москва - Казань" required></div>
-                    <div class="form-group"><label>Ставка клиента (руб)</label><input type="number" id="f-client-rate" required></div>
-                    <div class="form-group"><label>Ставка подрядчика (руб)</label><input type="number" id="f-contractor-rate" required></div>
+                    <div class="form-group"><label>Клиент</label><input type="text" id="f-client" required></div>
+                    <div class="form-group"><label>Подрядчик</label><input type="text" id="f-contractor" required></div>
+                    <div class="form-group"><label>Маршрут</label><input type="text" id="f-route" required></div>
+                    <div class="form-group"><label>Ставка клиента</label><input type="number" id="f-client-rate" required></div>
+                    <div class="form-group"><label>Ставка подрядчика</label><input type="number" id="f-contractor-rate" required></div>
                 </div>
-                <button type="submit">+ Добавить рейс в систему</button>
+                <button type="submit">+ Добавить рейс</button>
             </form>
         </div>
 
         <table>
             <thead>
                 <tr>
-                    <th>1С</th>
                     <th>Даты</th>
                     <th>Клиент / Подрядчик</th>
-                    <th>Авто / Тип</th>
                     <th>Маршрут</th>
                     <th>Ставки (Кл / Подр)</th>
-                    <th>Доп. расходы</th>
+                    <th>Оплата (Светофор)</th>
                     <th>Маржа</th>
                 </tr>
             </thead>
@@ -61,41 +61,51 @@
     </div>
 
     <script>
-        // Функция загрузки таблицы (вынесли отдельно, чтобы обновлять после добавления)
+        // Функция для отрисовки правильного цвета у селекта
+        function getColorClass(status) {
+            if(status === 'Оплачено') return 'status-green';
+            if(status === 'Просрочка') return 'status-red';
+            return 'status-yellow'; // По умолчанию Ожидание
+        }
+
+        // Загрузка таблицы
         function loadOrders() {
             fetch('/api/orders')
                 .then(res => res.json())
                 .then(data => {
                     const tableBody = document.getElementById('orders-table-body');
-                    tableBody.innerHTML = ''; // Очищаем таблицу перед загрузкой
+                    tableBody.innerHTML = ''; 
 
                     data.data.forEach(order => {
-                        const totalExtra = order.extraExpenses.reduce((sum, exp) => sum + exp.amount, 0);
-                        const finalMargin = order.clientRate - order.contractorRate - totalExtra;
+                        const finalMargin = order.clientRate - order.contractorRate;
+                        const colorClass = getColorClass(order.paymentStatus);
 
                         const row = `<tr>
-                            <td class="status-sync">${order.sync1C}</td>
-                            <td>${order.orderDate}<br>${order.loadDate}<br>${order.unloadDate}</td>
+                            <td>${order.orderDate}</td>
                             <td><strong>${order.clientName}</strong><br><em>${order.contractorName}</em></td>
-                            <td>${order.carNumber}<br>${order.transportType}</td>
                             <td>${order.route}</td>
-                            <td>${order.clientRate.toLocaleString()} / ${order.contractorRate.toLocaleString()} ${order.currency}</td>
-                            <td>${order.extraExpenses.map(e => `<span class="extra-box">${e.category}: ${e.amount}</span>`).join('')}</td>
-                            <td class="margin-val">${finalMargin.toLocaleString()} ${order.currency}</td>
+                            <td>${order.clientRate.toLocaleString()} / ${order.contractorRate.toLocaleString()}</td>
+                            
+                            <td>
+                                <select class="status-select ${colorClass}" onchange="updatePaymentStatus(${order.id}, this.value)">
+                                    <option value="Ожидание" ${order.paymentStatus === 'Ожидание' ? 'selected' : ''}>Ожидание</option>
+                                    <option value="Оплачено" ${order.paymentStatus === 'Оплачено' ? 'selected' : ''}>Оплачено</option>
+                                    <option value="Просрочка" ${order.paymentStatus === 'Просрочка' ? 'selected' : ''}>Просрочка</option>
+                                </select>
+                            </td>
+                            
+                            <td class="margin-val">${finalMargin.toLocaleString()}</td>
                         </tr>`;
                         tableBody.innerHTML += row;
                     });
                 });
         }
 
-        // Загружаем заявки при открытии страницы
         loadOrders();
 
-        // Логика отправки новой заявки
+        // Добавление новой заявки
         document.getElementById('add-order-form').addEventListener('submit', function(e) {
-            e.preventDefault(); // Останавливаем стандартную перезагрузку страницы
-
-            // Собираем данные из полей ввода
+            e.preventDefault(); 
             const newOrderData = {
                 orderDate: document.getElementById('f-date').value,
                 clientName: document.getElementById('f-client').value,
@@ -105,20 +115,30 @@
                 contractorRate: document.getElementById('f-contractor-rate').value
             };
 
-            // Отправляем данные на сервер
             fetch('/api/orders', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(newOrderData)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if(data.status === "success") {
-                    document.getElementById('add-order-form').reset(); // Очищаем форму
-                    loadOrders(); // Перерисовываем таблицу с новыми данными!
-                }
+            }).then(res => res.json()).then(() => {
+                document.getElementById('add-order-form').reset();
+                loadOrders(); 
             });
         });
+
+        // НОВАЯ ФУНКЦИЯ: Отправка измененного статуса на сервер
+        function updatePaymentStatus(orderId, newStatus) {
+            fetch(`/api/orders/${orderId}/status`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === "success") {
+                    loadOrders(); // Перерисовываем таблицу, чтобы цвет обновился
+                }
+            });
+        }
     </script>
 </body>
 </html>
