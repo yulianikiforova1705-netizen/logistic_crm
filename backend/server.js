@@ -1,115 +1,84 @@
 // backend/server.js
-
 const express = require('express');
-// Подключаем наш файл конфигурации
-const config = require('./config'); 
 const path = require('path');
+const config = require('./config'); 
 
 const app = express();
 const PORT = 3000;
 
-// Разрешаем серверу понимать формат JSON (пригодится для передачи данных)
 app.use(express.json());
-// Раздаем визуальную часть системы из папки frontend
 app.use(express.static(path.join(__dirname, '../frontend')));
-// Создаем наш первый тестовый маршрут (API endpoint)
-app.get('/api/status', (req, res) => {
-    // Сервер будет отвечать информацией о системе
-    res.json({
-        status: "success",
-        message: "CRM API работает стабильно!",
-        systemInfo: {
-            author: config.SYSTEM_AUTHOR,
-            version: config.APP_VERSION,
-            currentClient: config.CLIENT_COMPANY_NAME
-        }
-    });
-});
-// backend/server.js
 
-// Временная база данных с полным набором полей
+// Наша база данных (массив)
 const orders = [
     {
         id: 1,
         orderDate: "2026-04-07",
-        loadDate: "2026-04-08",     // Дата загрузки
-        unloadDate: "2026-04-10",   // Дата выгрузки
+        loadDate: "2026-04-08",
+        unloadDate: "2026-04-10",
         clientName: "ООО МегаСтрой",
         contractorName: "ИП Иванов А.А.",
-        carNumber: "А123БВ 777",    // Номер авто
+        carNumber: "А123БВ 777",
         route: "Москва - СПБ",
         transportType: "Тент 20т",
         clientRate: 100000,
         contractorRate: 80000,
         currency: "RUB",
         paymentStatus: "Ожидание",
-        sync1C: "Синхронизировано", // Статус коннекта с 1С
-        extraExpenses: [            // Блок доп. расходов
-            { category: "Простой", amount: 5000 },
-            { category: "Страховка", amount: 2000 }
-        ]
+        sync1C: "Синхронизировано",
+        extraExpenses: []
     }
 ];
 
-// Маршрут для получения списка заявок
-app.get('/api/orders', (req, res) => {
-    res.json({
-        status: "success",
-        totalOrders: orders.length,
-        data: orders
-    });
+// 1. Маршрут: Проверка статуса сервера
+app.get('/api/status', (req, res) => {
+    res.json({ status: "success", systemInfo: { author: config.SYSTEM_AUTHOR } });
 });
-// Маршрут для ДОБАВЛЕНИЯ новой заявки с формы
+
+// 2. Маршрут: ПОЛУЧИТЬ все заявки (GET)
+app.get('/api/orders', (req, res) => {
+    res.json({ status: "success", data: orders });
+});
+
+// 3. Маршрут: ДОБАВИТЬ новую заявку (POST)
 app.post('/api/orders', (req, res) => {
-    // Формируем новую заявку из данных, которые прислал браузер
     const newOrder = {
-        id: orders.length + 1,
+        id: orders.length > 0 ? Math.max(...orders.map(o => o.id)) + 1 : 1, // Безопасная генерация ID
         orderDate: req.body.orderDate,
-        loadDate: req.body.loadDate || "Уточняется",
-        unloadDate: req.body.unloadDate || "Уточняется",
+        loadDate: "Уточняется",
+        unloadDate: "Уточняется",
         clientName: req.body.clientName,
         contractorName: req.body.contractorName,
-        carNumber: req.body.carNumber || "Не назначен",
+        carNumber: "Не назначен",
         route: req.body.route,
-        transportType: req.body.transportType || "Стандарт",
-        clientRate: Number(req.body.clientRate), // Обязательно превращаем в число для математики
+        transportType: "Стандарт",
+        clientRate: Number(req.body.clientRate),
         contractorRate: Number(req.body.contractorRate),
         currency: "RUB",
         paymentStatus: "Ожидание",
         sync1C: "В очереди",
-        extraExpenses: [] // Пока без доп. расходов при создании
+        extraExpenses: []
     };
-
-    // Добавляем в нашу временную базу данных
     orders.push(newOrder);
-
-    // Отправляем ответ, что всё прошло успешно
-    res.json({
-        status: "success",
-        message: "Заявка успешно добавлена!",
-        data: newOrder
-    });
+    res.json({ status: "success", data: newOrder });
 });
-// Маршрут для ИЗМЕНЕНИЯ статуса оплаты
-app.patch('/api/orders/:id/status', (req, res) => {
-    const orderId = parseInt(req.params.id); // Получаем ID заявки
-    const newStatus = req.body.status;       // Получаем новый статус
 
-    // Ищем заявку в нашей базе данных
-    const order = orders.find(o => o.id === orderId);
+// 4. Маршрут: ИЗМЕНИТЬ статус оплаты (PATCH) - ТОТ САМЫЙ СВЕТОФОР
+app.patch('/api/orders/:id/status', (req, res) => {
+    const orderId = parseInt(req.params.id);
+    const newStatus = req.body.status;
     
+    const order = orders.find(o => o.id === orderId);
     if (order) {
-        order.paymentStatus = newStatus; // Обновляем статус
-        res.json({ status: "success", message: "Статус обновлен" });
+        order.paymentStatus = newStatus;
+        res.json({ status: "success" });
     } else {
         res.status(404).json({ status: "error", message: "Заявка не найдена" });
     }
 });
+
 // Запускаем сервер
 app.listen(PORT, () => {
-    console.log(`=================================`);
-    console.log(`🚀 Сервер запущен на http://localhost:${PORT}`);
-    console.log(`💼 Клиент: ${config.CLIENT_COMPANY_NAME}`);
+    console.log(`🚀 Сервер запущен. Порт: ${PORT}`);
     console.log(`👩‍💻 Разработчик: ${config.SYSTEM_AUTHOR}`);
-    console.log(`=================================`);
 });
