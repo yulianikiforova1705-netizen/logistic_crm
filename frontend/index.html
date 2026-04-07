@@ -12,18 +12,21 @@
         .form-group label { font-weight: bold; margin-bottom: 4px; font-size: 12px; }
         .form-group input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
         button { background-color: #28a745; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; vertical-align: top; }
         th { background-color: #007bff; color: white; position: sticky; top: 0; }
         
-        /* Стили для светофора */
         select.status-select { border: none; padding: 4px 8px; border-radius: 4px; font-weight: bold; cursor: pointer; outline: none; font-size: 12px; }
         .status-yellow { background-color: #fff3cd; color: #856404; }
         .status-green { background-color: #d4edda; color: #155724; }
         .status-red { background-color: #f8d7da; color: #721c24; }
         
         .status-sync { color: #28a745; font-weight: bold; font-size: 11px; }
-        .margin-val { font-weight: bold; color: #28a745; }
+        .extra-box { font-size: 11px; color: #666; background: #eee; padding: 4px 6px; border-radius: 3px; display: block; margin-bottom: 4px; }
+        .btn-small { background-color: #6c757d; padding: 4px 8px; font-size: 10px; margin-top: 5px; width: 100%; }
+        .margin-val { font-weight: bold; color: #28a745; font-size: 14px; }
+        .margin-negative { color: #dc3545; } /* Красный цвет, если ушли в минус */
     </style>
 </head>
 <body>
@@ -52,8 +55,9 @@
                     <th>Клиент / Подрядчик</th>
                     <th>Маршрут</th>
                     <th>Ставки (Кл / Подр)</th>
-                    <th>Оплата (Светофор)</th>
-                    <th>Маржа</th>
+                    <th>Оплата</th>
+                    <th>Доп. расходы</th>
+                    <th>Маржа (Прибыль)</th>
                 </tr>
             </thead>
             <tbody id="orders-table-body"></tbody>
@@ -61,14 +65,12 @@
     </div>
 
     <script>
-        // Функция для отрисовки правильного цвета у селекта
         function getColorClass(status) {
             if(status === 'Оплачено') return 'status-green';
             if(status === 'Просрочка') return 'status-red';
-            return 'status-yellow'; // По умолчанию Ожидание
+            return 'status-yellow'; 
         }
 
-        // Загрузка таблицы
         function loadOrders() {
             fetch('/api/orders')
                 .then(res => res.json())
@@ -77,15 +79,23 @@
                     tableBody.innerHTML = ''; 
 
                     data.data.forEach(order => {
-                        const finalMargin = order.clientRate - order.contractorRate;
+                        // Считаем все расходы
+                        const totalExtra = order.extraExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+                        // Вычитаем расходы из прибыли
+                        const finalMargin = order.clientRate - order.contractorRate - totalExtra;
+                        // Если ушли в минус, красим в красный
+                        const marginClass = finalMargin < 0 ? 'margin-negative' : 'margin-val';
                         const colorClass = getColorClass(order.paymentStatus);
+
+                        // Собираем список расходов
+                        let expensesHtml = order.extraExpenses.map(e => `<span class="extra-box"><b>${e.category}:</b> ${e.amount}</span>`).join('');
+                        expensesHtml += `<button class="btn-small" onclick="addExpense(${order.id})">+ Добавить расход</button>`;
 
                         const row = `<tr>
                             <td>${order.orderDate}</td>
                             <td><strong>${order.clientName}</strong><br><em>${order.contractorName}</em></td>
                             <td>${order.route}</td>
                             <td>${order.clientRate.toLocaleString()} / ${order.contractorRate.toLocaleString()}</td>
-                            
                             <td>
                                 <select class="status-select ${colorClass}" onchange="updatePaymentStatus(${order.id}, this.value)">
                                     <option value="Ожидание" ${order.paymentStatus === 'Ожидание' ? 'selected' : ''}>Ожидание</option>
@@ -93,8 +103,8 @@
                                     <option value="Просрочка" ${order.paymentStatus === 'Просрочка' ? 'selected' : ''}>Просрочка</option>
                                 </select>
                             </td>
-                            
-                            <td class="margin-val">${finalMargin.toLocaleString()}</td>
+                            <td>${expensesHtml}</td>
+                            <td class="${marginClass}">${finalMargin.toLocaleString()}</td>
                         </tr>`;
                         tableBody.innerHTML += row;
                     });
@@ -103,7 +113,6 @@
 
         loadOrders();
 
-        // Добавление новой заявки
         document.getElementById('add-order-form').addEventListener('submit', function(e) {
             e.preventDefault(); 
             const newOrderData = {
@@ -125,19 +134,30 @@
             });
         });
 
-        // НОВАЯ ФУНКЦИЯ: Отправка измененного статуса на сервер
         function updatePaymentStatus(orderId, newStatus) {
             fetch(`/api/orders/${orderId}/status`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status: newStatus })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if(data.status === "success") {
-                    loadOrders(); // Перерисовываем таблицу, чтобы цвет обновился
-                }
-            });
+            }).then(() => loadOrders());
+        }
+
+        // НОВАЯ ФУНКЦИЯ: Добавление расхода через всплывающие окна
+        function addExpense(orderId) {
+            const category = prompt("Введите категорию (например: Штраф, Простой, Страховка):");
+            if (!category) return; // Если нажали Отмена
+            
+            const amount = prompt("Введите сумму в рублях:");
+            if (!amount || isNaN(amount)) {
+                alert("Ошибка: введите корректное число!");
+                return;
+            }
+
+            fetch(`/api/orders/${orderId}/expenses`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ category: category, amount: amount })
+            }).then(() => loadOrders()); // Перерисовываем таблицу для обновления маржи
         }
     </script>
 </body>

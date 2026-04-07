@@ -76,7 +76,22 @@ app.patch('/api/orders/:id/status', (req, res) => {
         res.status(404).json({ status: "error", message: "Заявка не найдена" });
     }
 });
+// 5. Маршрут: ДОБАВИТЬ доп. расход к конкретной заявке (POST)
+app.post('/api/orders/:id/expenses', (req, res) => {
+    const orderId = parseInt(req.params.id);
+    const { category, amount } = req.body;
 
+    const order = orders.find(o => o.id === orderId);
+    if (order) {
+        order.extraExpenses.push({
+            category: category || "Прочее",
+            amount: Number(amount) || 0
+        });
+        res.json({ status: "success", message: "Расход успешно добавлен" });
+    } else {
+        res.status(404).json({ status: "error", message: "Заявка не найдена" });
+    }
+});
 // Запускаем сервер
 app.listen(PORT, () => {
     console.log(`🚀 Сервер запущен. Порт: ${PORT}`);
