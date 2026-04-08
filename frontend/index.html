@@ -6,14 +6,24 @@
     <style>
         body { font-family: 'Segoe UI', sans-serif; padding: 20px; background-color: #f4f7f6; font-size: 13px; }
         .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 1400px; margin: auto; }
+        
+        /* Стили для нового Дашборда */
+        .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .dash-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); text-align: center; border: 1px solid #e1e4e8; border-top: 4px solid #007bff; }
+        .dash-card:nth-child(2) { border-top-color: #28a745; } /* Зеленая полоса для прибыли */
+        .dash-card:nth-child(3) { border-top-color: #dc3545; } /* Красная полоса для проблем */
+        .dash-card h4 { margin: 0 0 10px 0; color: #6c757d; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .dash-value { font-size: 26px; font-weight: bold; color: #333; }
+
         .form-card { background: #eef2f5; padding: 15px; border-radius: 6px; margin-bottom: 20px; }
         .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 15px; }
         .form-group { display: flex; flex-direction: column; }
         .form-group label { font-weight: bold; margin-bottom: 4px; font-size: 12px; }
         .form-group input, .form-group select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
-        button { background-color: #28a745; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        button { background-color: #28a745; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        button:hover { background-color: #218838; }
         
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { border: 1px solid #ddd; padding: 8px; text-align: left; vertical-align: top; }
         th { background-color: #007bff; color: white; position: sticky; top: 0; }
         
@@ -22,13 +32,11 @@
         .status-green { background-color: #d4edda; color: #155724; }
         .status-red { background-color: #f8d7da; color: #721c24; }
         
-        .status-sync { color: #28a745; font-weight: bold; font-size: 11px; }
         .extra-box { font-size: 11px; color: #666; background: #eee; padding: 4px 6px; border-radius: 3px; display: block; margin-bottom: 4px; }
         .btn-small { background-color: #6c757d; padding: 4px 8px; font-size: 10px; margin-top: 5px; width: 100%; }
         .margin-val { font-weight: bold; color: #28a745; font-size: 14px; }
-        .margin-negative { color: #dc3545; }
+        .margin-negative { color: #dc3545; font-weight: bold; font-size: 14px; }
         
-        /* Стили для нового всплывающего окна (модалки) */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 1000; }
         .modal-box { background: white; padding: 25px; border-radius: 8px; width: 300px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
         .modal-box h3 { margin-top: 0; border-bottom: 2px solid #007bff; padding-bottom: 10px; }
@@ -38,7 +46,22 @@
 </head>
 <body>
     <div class="container">
-        <h1>Мониторинг рейсов</h1>
+        <h1>Аналитика и Мониторинг рейсов</h1>
+
+        <div class="dashboard">
+            <div class="dash-card">
+                <h4>Всего рейсов</h4>
+                <div class="dash-value" id="dash-total">0</div>
+            </div>
+            <div class="dash-card">
+                <h4>Общая чистая маржа</h4>
+                <div class="dash-value margin-val" id="dash-margin">0 ₽</div>
+            </div>
+            <div class="dash-card">
+                <h4>Требуют внимания (Штрафы/Долги)</h4>
+                <div class="dash-value margin-negative" id="dash-problems">0</div>
+            </div>
+        </div>
 
         <div class="form-card">
             <h3>Создать новый рейс</h3>
@@ -97,7 +120,6 @@
     </div>
 
     <script>
-        // Переменная для запоминания, к какой заявке мы сейчас добавляем расход
         let currentOrderIdForExpense = null;
 
         function getColorClass(status) {
@@ -106,12 +128,40 @@
             return 'status-yellow'; 
         }
 
+        // НОВАЯ ФУНКЦИЯ: Обновление карточек дашборда
+        function updateDashboard(data) {
+            let totalOrders = data.length;
+            let totalMargin = 0;
+            let problemsCount = 0;
+
+            data.forEach(order => {
+                // Считаем маржу
+                const totalExtra = order.extraExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+                const finalMargin = order.clientRate - order.contractorRate - totalExtra;
+                totalMargin += finalMargin;
+
+                // Считаем проблемы (неоплаченные долги или наличие штрафов/простоев)
+                const hasProblematicExpenses = order.extraExpenses.some(e => ['Штраф', 'Простой', 'Опоздание', 'Перегруз'].includes(e.category));
+                if (order.paymentStatus === 'Просрочка' || hasProblematicExpenses) {
+                    problemsCount++;
+                }
+            });
+
+            // Выводим цифры на экран
+            document.getElementById('dash-total').innerText = totalOrders;
+            document.getElementById('dash-margin').innerText = totalMargin.toLocaleString() + ' ₽';
+            document.getElementById('dash-problems').innerText = problemsCount;
+        }
+
         function loadOrders() {
             fetch('/api/orders')
                 .then(res => res.json())
                 .then(data => {
                     const tableBody = document.getElementById('orders-table-body');
                     tableBody.innerHTML = ''; 
+
+                    // Обновляем дашборд перед отрисовкой таблицы
+                    updateDashboard(data.data);
 
                     data.data.forEach(order => {
                         const totalExtra = order.extraExpenses.reduce((sum, exp) => sum + exp.amount, 0);
@@ -135,7 +185,7 @@
                                 </select>
                             </td>
                             <td>${expensesHtml}</td>
-                            <td class="${marginClass}">${finalMargin.toLocaleString()}</td>
+                            <td class="${marginClass}">${finalMargin.toLocaleString()} ₽</td>
                         </tr>`;
                         tableBody.innerHTML += row;
                     });
@@ -159,7 +209,7 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(newOrderData)
-            }).then(res => res.json()).then(() => {
+            }).then(() => {
                 document.getElementById('add-order-form').reset();
                 loadOrders(); 
             });
@@ -173,16 +223,14 @@
             }).then(() => loadOrders());
         }
 
-        // --- ЛОГИКА НОВОГО ОКНА РАСХОДОВ ---
-
         function openExpenseModal(orderId) {
-            currentOrderIdForExpense = orderId; // Запоминаем ID заявки
-            document.getElementById('modal-amount').value = ''; // Очищаем старую сумму
-            document.getElementById('expense-modal').style.display = 'flex'; // Показываем окно
+            currentOrderIdForExpense = orderId;
+            document.getElementById('modal-amount').value = ''; 
+            document.getElementById('expense-modal').style.display = 'flex'; 
         }
 
         function closeExpenseModal() {
-            document.getElementById('expense-modal').style.display = 'none'; // Прячем окно
+            document.getElementById('expense-modal').style.display = 'none'; 
             currentOrderIdForExpense = null;
         }
 
@@ -200,8 +248,8 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ category: category, amount: amount })
             }).then(() => {
-                closeExpenseModal(); // Закрываем окно
-                loadOrders(); // Перерисовываем таблицу с новыми цифрами
+                closeExpenseModal(); 
+                loadOrders(); 
             });
         }
     </script>
