@@ -106,5 +106,27 @@ app.post('/api/orders/:id/expenses', async (req, res) => {
         res.status(500).json({ status: "error", message: err.message });
     }
 });
+// 5. УДАЛИТЬ заявку (DELETE)
+app.delete('/api/orders/:id', async (req, res) => {
+    try {
+        await pool.query('DELETE FROM orders WHERE id = $1', [req.params.id]);
+        res.json({ status: "success" });
+    } catch (err) {
+        res.status(500).json({ status: "error", message: err.message });
+    }
+});
 
+// 6. ОБНОВИТЬ заявку (PUT - Редактирование)
+app.put('/api/orders/:id', async (req, res) => {
+    const { orderDate, clientName, contractorName, route, clientRate, contractorRate } = req.body;
+    try {
+        await pool.query(
+            'UPDATE orders SET order_date = $1, client_name = $2, contractor_name = $3, route = $4, client_rate = $5, contractor_rate = $6 WHERE id = $7',
+            [orderDate, clientName, contractorName, route, clientRate, contractorRate, req.params.id]
+        );
+        res.json({ status: "success" });
+    } catch (err) {
+        res.status(500).json({ status: "error", message: err.message });
+    }
+});
 app.listen(PORT, () => console.log(`🚀 Сервер на PostgreSQL запущен на порту ${PORT}`));

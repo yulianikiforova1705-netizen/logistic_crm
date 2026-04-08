@@ -21,10 +21,8 @@
         .form-group input, .form-group select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
         button { background-color: #28a745; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
         
-        /* Стили для строки поиска */
         .search-box { width: 100%; padding: 12px; font-size: 14px; border: 2px solid #007bff; border-radius: 6px; margin-bottom: 15px; box-sizing: border-box; outline: none; }
-        .search-box:focus { box-shadow: 0 0 8px rgba(0,123,255,0.3); }
-
+        
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { border: 1px solid #ddd; padding: 8px; text-align: left; vertical-align: top; }
         th { background-color: #007bff; color: white; position: sticky; top: 0; }
@@ -35,15 +33,17 @@
         .status-red { background-color: #f8d7da; color: #721c24; }
         
         .extra-box { font-size: 11px; color: #666; background: #eee; padding: 4px 6px; border-radius: 3px; display: block; margin-bottom: 4px; }
-        .btn-small { background-color: #6c757d; padding: 4px 8px; font-size: 10px; margin-top: 5px; width: 100%; }
+        .btn-small { background-color: #6c757d; padding: 6px 8px; font-size: 11px; margin-top: 5px; width: 100%; border-radius: 4px;}
+        .btn-blue { background-color: #007bff; }
+        .btn-cancel { background-color: #dc3545; }
+        
         .margin-val { font-weight: bold; color: #28a745; font-size: 14px; }
         .margin-negative { color: #dc3545; font-weight: bold; font-size: 14px; }
         
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 1000; }
-        .modal-box { background: white; padding: 25px; border-radius: 8px; width: 300px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
-        .modal-box h3 { margin-top: 0; border-bottom: 2px solid #007bff; padding-bottom: 10px; }
+        .modal-box { background: white; padding: 25px; border-radius: 8px; width: 350px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .modal-box h3 { margin-top: 0; border-bottom: 2px solid #007bff; padding-bottom: 10px; margin-bottom: 15px; }
         .modal-btn-group { display: flex; justify-content: space-between; margin-top: 20px; }
-        .btn-cancel { background-color: #dc3545; }
     </style>
 </head>
 <body>
@@ -71,18 +71,19 @@
             </form>
         </div>
 
-        <input type="text" id="search-input" class="search-box" placeholder="🔍 Умный поиск: введите имя клиента, подрядчика или город..." oninput="filterOrders()">
+        <input type="text" id="search-input" class="search-box" placeholder="🔍 Умный поиск: введите имя клиента, подрядчика или маршрут..." oninput="filterOrders()">
 
         <table>
             <thead>
                 <tr>
                     <th>Даты</th>
                     <th>Клиент / Подрядчик</th>
-                    <th>Авто / Маршрут</th>
+                    <th>Маршрут</th>
                     <th>Ставки (Кл / Подр)</th>
                     <th>Оплата</th>
                     <th>Доп. расходы</th>
                     <th>Маржа (Прибыль)</th>
+                    <th>Действия</th>
                 </tr>
             </thead>
             <tbody id="orders-table-body"></tbody>
@@ -111,9 +112,27 @@
         </div>
     </div>
 
+    <div class="modal-overlay" id="edit-modal">
+        <div class="modal-box" style="width: 450px;">
+            <h3>✏️ Редактировать рейс</h3>
+            <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
+                <div class="form-group"><label>Дата заявки</label><input type="date" id="e-date"></div>
+                <div class="form-group"><label>Маршрут</label><input type="text" id="e-route"></div>
+                <div class="form-group"><label>Клиент</label><input type="text" id="e-client"></div>
+                <div class="form-group"><label>Подрядчик</label><input type="text" id="e-contractor"></div>
+                <div class="form-group"><label>Ставка клиента</label><input type="number" id="e-client-rate"></div>
+                <div class="form-group"><label>Ставка подрядчика</label><input type="number" id="e-contractor-rate"></div>
+            </div>
+            <div class="modal-btn-group">
+                <button class="btn-cancel" onclick="closeEditModal()">Отмена</button>
+                <button class="btn-blue" onclick="submitEdit()">Сохранить изменения</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        let currentOrderIdForExpense = null;
-        let globalOrders = []; // Глобальная переменная для хранения всех скачанных заявок
+        let globalOrders = []; 
+        let currentOrderId = null; // Универсальный ID для модалок
 
         function getColorClass(status) {
             if(status === 'Оплачено') return 'status-green';
@@ -131,9 +150,7 @@
                 totalMargin += (order.clientRate - order.contractorRate - totalExtra);
 
                 const hasProblematicExpenses = order.extraExpenses.some(e => ['Штраф', 'Простой', 'Опоздание', 'Перегруз'].includes(e.category));
-                if (order.paymentStatus === 'Просрочка' || hasProblematicExpenses) {
-                    problemsCount++;
-                }
+                if (order.paymentStatus === 'Просрочка' || hasProblematicExpenses) problemsCount++;
             });
 
             document.getElementById('dash-total').innerText = totalOrders;
@@ -141,10 +158,8 @@
             document.getElementById('dash-problems').innerText = problemsCount;
         }
 
-        // РАЗДЕЛЯЕМ ЛОГИКУ: Отрисовка данных вынесена в отдельную функцию
         function renderTable(dataToRender) {
-            updateDashboard(dataToRender); // Обновляем дашборд на основе ТОЛЬКО отображаемых данных
-
+            updateDashboard(dataToRender); 
             const tableBody = document.getElementById('orders-table-body');
             tableBody.innerHTML = ''; 
 
@@ -160,7 +175,7 @@
                 const row = `<tr>
                     <td>${order.orderDate}</td>
                     <td><strong>${order.clientName}</strong><br><em>${order.contractorName}</em></td>
-                    <td>${order.carNumber}<br><small>${order.route}</small></td>
+                    <td>${order.route}</td>
                     <td>${order.clientRate.toLocaleString()} / ${order.contractorRate.toLocaleString()}</td>
                     <td>
                         <select class="status-select ${colorClass}" onchange="updatePaymentStatus(${order.id}, this.value)">
@@ -171,35 +186,33 @@
                     </td>
                     <td>${expensesHtml}</td>
                     <td class="${marginClass}">${finalMargin.toLocaleString()} ₽</td>
+                    <td>
+                        <button class="btn-small btn-blue" onclick="openEditModal(${order.id})">✏️ Изменить</button>
+                        <button class="btn-small btn-cancel" onclick="deleteOrder(${order.id})">🗑️ Удалить</button>
+                    </td>
                 </tr>`;
                 tableBody.innerHTML += row;
             });
         }
 
-        // НОВАЯ ФУНКЦИЯ: Поиск (Фильтрация)
         function filterOrders() {
             const query = document.getElementById('search-input').value.toLowerCase();
-            
-            // Ищем совпадения в клиенте, подрядчике, маршруте или номере авто
             const filteredData = globalOrders.filter(order => 
                 order.clientName.toLowerCase().includes(query) ||
                 order.contractorName.toLowerCase().includes(query) ||
-                order.route.toLowerCase().includes(query) ||
-                order.carNumber.toLowerCase().includes(query)
+                order.route?.toLowerCase().includes(query)
             );
-
-            renderTable(filteredData); // Рисуем только то, что нашли
+            renderTable(filteredData); 
         }
 
         function loadOrders() {
             fetch('/api/orders')
                 .then(res => res.json())
                 .then(data => {
-                    globalOrders = data.data; // Сохраняем в память
-                    filterOrders(); // Вызываем фильтр (он сам вызовет renderTable)
+                    globalOrders = data.data; 
+                    filterOrders(); 
                 });
         }
-
         loadOrders();
 
         document.getElementById('add-order-form').addEventListener('submit', function(e) {
@@ -212,7 +225,6 @@
                 clientRate: document.getElementById('f-client-rate').value,
                 contractorRate: document.getElementById('f-contractor-rate').value
             };
-
             fetch('/api/orders', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -231,30 +243,67 @@
             }).then(() => loadOrders());
         }
 
+        // --- ЛОГИКА РАСХОДОВ ---
         function openExpenseModal(orderId) {
-            currentOrderIdForExpense = orderId;
+            currentOrderId = orderId;
             document.getElementById('modal-amount').value = ''; 
             document.getElementById('expense-modal').style.display = 'flex'; 
         }
-
-        function closeExpenseModal() {
-            document.getElementById('expense-modal').style.display = 'none'; 
-            currentOrderIdForExpense = null;
-        }
-
+        function closeExpenseModal() { document.getElementById('expense-modal').style.display = 'none'; }
+        
         function submitExpense() {
             const category = document.getElementById('modal-category').value;
             const amount = document.getElementById('modal-amount').value;
             if (!amount || amount <= 0) return alert("Ошибка: введите корректную сумму!");
 
-            fetch(`/api/orders/${currentOrderIdForExpense}/expenses`, {
+            fetch(`/api/orders/${currentOrderId}/expenses`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ category: category, amount: amount })
-            }).then(() => {
-                closeExpenseModal(); 
-                loadOrders(); 
-            });
+            }).then(() => { closeExpenseModal(); loadOrders(); });
+        }
+
+        // --- НОВАЯ ЛОГИКА УДАЛЕНИЯ И РЕДАКТИРОВАНИЯ ---
+        function deleteOrder(orderId) {
+            if(confirm("Вы уверены, что хотите безвозвратно удалить этот рейс?")) {
+                fetch(`/api/orders/${orderId}`, { method: 'DELETE' })
+                    .then(() => loadOrders());
+            }
+        }
+
+        function openEditModal(orderId) {
+            currentOrderId = orderId;
+            // Ищем данные этой заявки в памяти
+            const order = globalOrders.find(o => o.id === orderId);
+            
+            // Подставляем старые данные в поля формы
+            document.getElementById('e-date').value = order.orderDate;
+            document.getElementById('e-client').value = order.clientName;
+            document.getElementById('e-contractor').value = order.contractorName;
+            document.getElementById('e-route').value = order.route;
+            document.getElementById('e-client-rate').value = order.clientRate;
+            document.getElementById('e-contractor-rate').value = order.contractorRate;
+            
+            document.getElementById('edit-modal').style.display = 'flex';
+        }
+
+        function closeEditModal() { document.getElementById('edit-modal').style.display = 'none'; }
+
+        function submitEdit() {
+            const updatedData = {
+                orderDate: document.getElementById('e-date').value,
+                clientName: document.getElementById('e-client').value,
+                contractorName: document.getElementById('e-contractor').value,
+                route: document.getElementById('e-route').value,
+                clientRate: document.getElementById('e-client-rate').value,
+                contractorRate: document.getElementById('e-contractor-rate').value
+            };
+
+            fetch(`/api/orders/${currentOrderId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updatedData)
+            }).then(() => { closeEditModal(); loadOrders(); });
         }
     </script>
 </body>
