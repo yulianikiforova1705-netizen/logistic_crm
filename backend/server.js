@@ -129,4 +129,17 @@ app.put('/api/orders/:id', async (req, res) => {
         res.status(500).json({ status: "error", message: err.message });
     }
 });
+// 7. АВТОРИЗАЦИЯ (Вход в систему)
+app.post('/api/login', (req, res) => {
+    const { username, password } = req.body;
+    
+    // Для MVP задаем пароль прямо здесь
+    if (username === 'admin' && password === '12345') {
+        // Если всё верно, выдаем успешный ответ и "токен"
+        res.json({ status: "success", token: "secret-crm-token-8899" });
+    } else {
+        // Если ошибка, возвращаем статус 401 (Отказано в доступе)
+        res.status(401).json({ status: "error", message: "Неверный логин или пароль" });
+    }
+});
 app.listen(PORT, () => console.log(`🚀 Сервер на PostgreSQL запущен на порту ${PORT}`));
