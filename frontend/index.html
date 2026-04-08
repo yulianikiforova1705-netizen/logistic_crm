@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Логистика CRM - Yulia Nikiforova</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; padding: 20px; background-color: #f4f7f6; font-size: 13px; }
         .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 1400px; margin: auto; }
@@ -19,9 +20,11 @@
         .form-group { display: flex; flex-direction: column; }
         .form-group label { font-weight: bold; margin-bottom: 4px; font-size: 12px; }
         .form-group input, .form-group select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
-        button { background-color: #28a745; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        button { background-color: #28a745; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        button:hover { opacity: 0.9; }
         
-        .search-box { width: 100%; padding: 12px; font-size: 14px; border: 2px solid #007bff; border-radius: 6px; margin-bottom: 15px; box-sizing: border-box; outline: none; }
+        .toolbar { display: flex; gap: 15px; margin-bottom: 15px; align-items: center; }
+        .search-box { flex-grow: 1; padding: 12px; font-size: 14px; border: 2px solid #007bff; border-radius: 6px; outline: none; }
         
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { border: 1px solid #ddd; padding: 8px; text-align: left; vertical-align: top; }
@@ -36,6 +39,7 @@
         .btn-small { background-color: #6c757d; padding: 6px 8px; font-size: 11px; margin-top: 5px; width: 100%; border-radius: 4px;}
         .btn-blue { background-color: #007bff; }
         .btn-cancel { background-color: #dc3545; }
+        .btn-excel { background-color: #198754; font-size: 14px; padding: 12px 20px; }
         
         .margin-val { font-weight: bold; color: #28a745; font-size: 14px; }
         .margin-negative { color: #dc3545; font-weight: bold; font-size: 14px; }
@@ -71,7 +75,10 @@
             </form>
         </div>
 
-        <input type="text" id="search-input" class="search-box" placeholder="🔍 Умный поиск: введите имя клиента, подрядчика или маршрут..." oninput="filterOrders()">
+        <div class="toolbar">
+            <input type="text" id="search-input" class="search-box" placeholder="🔍 Умный поиск: введите имя клиента, подрядчика или маршрут..." oninput="filterOrders()">
+            <button class="btn-excel" onclick="exportToExcel()">📊 Скачать в Excel</button>
+        </div>
 
         <table>
             <thead>
@@ -132,7 +139,7 @@
 
     <script>
         let globalOrders = []; 
-        let currentOrderId = null; // Универсальный ID для модалок
+        let currentOrderId = null; 
 
         function getColorClass(status) {
             if(status === 'Оплачено') return 'status-green';
@@ -146,10 +153,10 @@
             let problemsCount = 0;
 
             data.forEach(order => {
-                const totalExtra = order.extraExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+                const totalExtra = order.extraExpenses ? order.extraExpenses.reduce((sum, exp) => sum + exp.amount, 0) : 0;
                 totalMargin += (order.clientRate - order.contractorRate - totalExtra);
 
-                const hasProblematicExpenses = order.extraExpenses.some(e => ['Штраф', 'Простой', 'Опоздание', 'Перегруз'].includes(e.category));
+                const hasProblematicExpenses = order.extraExpenses && order.extraExpenses.some(e => ['Штраф', 'Простой', 'Опоздание', 'Перегруз'].includes(e.category));
                 if (order.paymentStatus === 'Просрочка' || hasProblematicExpenses) problemsCount++;
             });
 
@@ -164,19 +171,19 @@
             tableBody.innerHTML = ''; 
 
             dataToRender.forEach(order => {
-                const totalExtra = order.extraExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+                const totalExtra = order.extraExpenses ? order.extraExpenses.reduce((sum, exp) => sum + exp.amount, 0) : 0;
                 const finalMargin = order.clientRate - order.contractorRate - totalExtra;
                 const marginClass = finalMargin < 0 ? 'margin-negative' : 'margin-val';
                 const colorClass = getColorClass(order.paymentStatus);
 
-                let expensesHtml = order.extraExpenses.map(e => `<span class="extra-box"><b>${e.category}:</b> ${e.amount}</span>`).join('');
+                let expensesHtml = order.extraExpenses ? order.extraExpenses.map(e => `<span class="extra-box"><b>${e.category}:</b> ${e.amount}</span>`).join('') : '';
                 expensesHtml += `<button class="btn-small" onclick="openExpenseModal(${order.id})">+ Добавить расход</button>`;
 
                 const row = `<tr>
                     <td>${order.orderDate}</td>
                     <td><strong>${order.clientName}</strong><br><em>${order.contractorName}</em></td>
-                    <td>${order.route}</td>
-                    <td>${order.clientRate.toLocaleString()} / ${order.contractorRate.toLocaleString()}</td>
+                    <td>${order.route || ''}</td>
+                    <td>${Number(order.clientRate).toLocaleString()} / ${Number(order.contractorRate).toLocaleString()}</td>
                     <td>
                         <select class="status-select ${colorClass}" onchange="updatePaymentStatus(${order.id}, this.value)">
                             <option value="Ожидание" ${order.paymentStatus === 'Ожидание' ? 'selected' : ''}>Ожидание</option>
@@ -200,7 +207,7 @@
             const filteredData = globalOrders.filter(order => 
                 order.clientName.toLowerCase().includes(query) ||
                 order.contractorName.toLowerCase().includes(query) ||
-                order.route?.toLowerCase().includes(query)
+                (order.route && order.route.toLowerCase().includes(query))
             );
             renderTable(filteredData); 
         }
@@ -263,20 +270,17 @@
             }).then(() => { closeExpenseModal(); loadOrders(); });
         }
 
-        // --- НОВАЯ ЛОГИКА УДАЛЕНИЯ И РЕДАКТИРОВАНИЯ ---
+        // --- ЛОГИКА УДАЛЕНИЯ И РЕДАКТИРОВАНИЯ ---
         function deleteOrder(orderId) {
-            if(confirm("Вы уверены, что хотите безвозвратно удалить этот рейс?")) {
-                fetch(`/api/orders/${orderId}`, { method: 'DELETE' })
-                    .then(() => loadOrders());
+            if(confirm("Вы уверены, что хотите удалить этот рейс?")) {
+                fetch(`/api/orders/${orderId}`, { method: 'DELETE' }).then(() => loadOrders());
             }
         }
 
         function openEditModal(orderId) {
             currentOrderId = orderId;
-            // Ищем данные этой заявки в памяти
             const order = globalOrders.find(o => o.id === orderId);
             
-            // Подставляем старые данные в поля формы
             document.getElementById('e-date').value = order.orderDate;
             document.getElementById('e-client').value = order.clientName;
             document.getElementById('e-contractor').value = order.contractorName;
@@ -304,6 +308,41 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(updatedData)
             }).then(() => { closeEditModal(); loadOrders(); });
+        }
+
+        // --- НОВАЯ ФУНКЦИЯ: ЭКСПОРТ В EXCEL ---
+        function exportToExcel() {
+            // Подготавливаем красивые данные для Excel
+            const excelData = globalOrders.map(order => {
+                const totalExtra = order.extraExpenses ? order.extraExpenses.reduce((sum, exp) => sum + exp.amount, 0) : 0;
+                const finalMargin = order.clientRate - order.contractorRate - totalExtra;
+                
+                // Собираем текст расходов в одну строчку
+                const expensesText = order.extraExpenses && order.extraExpenses.length > 0 
+                    ? order.extraExpenses.map(e => `${e.category}: ${e.amount} руб.`).join(' | ') 
+                    : "Нет расходов";
+
+                return {
+                    "Дата заявки": order.orderDate,
+                    "Клиент": order.clientName,
+                    "Подрядчик": order.contractorName,
+                    "Маршрут": order.route || "Не указан",
+                    "Ставка клиента (руб)": Number(order.clientRate),
+                    "Ставка подрядчика (руб)": Number(order.contractorRate),
+                    "Статус оплаты": order.paymentStatus,
+                    "Доп. расходы": expensesText,
+                    "Чистая Прибыль (руб)": finalMargin
+                };
+            });
+
+            // Создаем виртуальную таблицу и сохраняем на компьютер
+            const worksheet = XLSX.utils.json_to_sheet(excelData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Отчет по рейсам");
+            
+            // Скачиваем файл с текущей датой в названии
+            const dateStr = new Date().toLocaleDateString('ru-RU').replace(/\./g, '-');
+            XLSX.writeFile(workbook, `Логистика_Отчет_${dateStr}.xlsx`);
         }
     </script>
 </body>
