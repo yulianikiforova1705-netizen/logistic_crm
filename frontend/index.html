@@ -7,7 +7,6 @@
     <style>
         body { font-family: 'Segoe UI', sans-serif; padding: 20px; background-color: #f4f7f6; font-size: 13px; margin: 0; }
         
-        /* Стили экрана логина */
         #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #2c3e50; display: flex; align-items: center; justify-content: center; z-index: 9999; }
         .login-box { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); width: 300px; text-align: center; }
         .login-box h2 { margin-top: 0; color: #333; margin-bottom: 20px; }
@@ -16,7 +15,6 @@
         .btn-login:hover { background: #0056b3; }
         #login-error { color: #dc3545; font-size: 12px; margin-bottom: 10px; display: none; }
 
-        /* Основной интерфейс (спрятан по умолчанию) */
         #app-content { display: none; }
         
         .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 1400px; margin: auto; }
@@ -52,6 +50,7 @@
         .extra-box { font-size: 11px; color: #666; background: #eee; padding: 4px 6px; border-radius: 3px; display: block; margin-bottom: 4px; }
         .btn-small { background-color: #6c757d; padding: 6px 8px; font-size: 11px; margin-top: 5px; width: 100%; border-radius: 4px;}
         .btn-blue { background-color: #007bff; }
+        .btn-orange { background-color: #fd7e14; }
         .btn-cancel { background-color: #dc3545; }
         .btn-excel { background-color: #198754; font-size: 14px; padding: 12px 20px; }
         
@@ -163,17 +162,28 @@
         </div>
     </div>
 
+    <div class="modal-overlay" id="docs-modal">
+        <div class="modal-box" style="width: 320px;">
+            <h3 style="border-bottom-color: #fd7e14;">📄 Печать документов</h3>
+            <p style="font-size: 13px; color: #666; margin-bottom: 15px;">Выберите нужный документ для загрузки в PDF:</p>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button class="btn-blue" onclick="generateInvoice()" style="width: 100%; padding: 12px; font-size: 13px;">🧾 Счет Клиенту</button>
+                <button class="btn-orange" onclick="generateContractorOrder()" style="width: 100%; padding: 12px; font-size: 13px; color: white;">🚚 Заявка Перевозчику</button>
+            </div>
+            <div class="modal-btn-group" style="margin-top: 15px;">
+                <button class="btn-cancel" onclick="closeDocsModal()" style="width: 100%;">Отмена</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // --- ЛОГИКА АВТОРИЗАЦИИ ---
         function checkAuth() {
             const token = localStorage.getItem('crm_token');
             if (token) {
-                // Если токен есть, прячем экран входа и показываем CRM
                 document.getElementById('login-screen').style.display = 'none';
                 document.getElementById('app-content').style.display = 'block';
-                loadOrders(); // Загружаем данные только после успешного входа!
+                loadOrders(); 
             } else {
-                // Если токена нет, показываем экран входа
                 document.getElementById('login-screen').style.display = 'flex';
                 document.getElementById('app-content').style.display = 'none';
             }
@@ -182,34 +192,22 @@
         function attemptLogin() {
             const user = document.getElementById('login-username').value;
             const pass = document.getElementById('login-password').value;
-
-            fetch('/api/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: user, password: pass })
-            })
+            fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: user, password: pass }) })
             .then(res => res.json())
             .then(data => {
                 if (data.status === 'success') {
-                    localStorage.setItem('crm_token', data.token); // Сохраняем токен
+                    localStorage.setItem('crm_token', data.token);
                     document.getElementById('login-error').style.display = 'none';
-                    checkAuth(); // Перезапускаем проверку (откроет CRM)
+                    checkAuth();
                 } else {
                     document.getElementById('login-error').style.display = 'block';
                 }
             });
         }
 
-        function logout() {
-            localStorage.removeItem('crm_token'); // Удаляем токен
-            checkAuth(); // Перезапускаем проверку (вернет на экран логина)
-        }
-
-        // Запускаем проверку при открытии сайта
+        function logout() { localStorage.removeItem('crm_token'); checkAuth(); }
         checkAuth();
 
-
-        // --- ВЕСЬ ОСТАЛЬНОЙ КОД CRM (Таблица, Дашборд, Модалки) ---
         let globalOrders = []; 
         let currentOrderId = null; 
 
@@ -220,18 +218,13 @@
         }
 
         function updateDashboard(data) {
-            let totalOrders = data.length;
-            let totalMargin = 0;
-            let problemsCount = 0;
-
+            let totalOrders = data.length; let totalMargin = 0; let problemsCount = 0;
             data.forEach(order => {
                 const totalExtra = order.extraExpenses ? order.extraExpenses.reduce((sum, exp) => sum + exp.amount, 0) : 0;
                 totalMargin += (order.clientRate - order.contractorRate - totalExtra);
-
                 const hasProblematicExpenses = order.extraExpenses && order.extraExpenses.some(e => ['Штраф', 'Простой', 'Опоздание', 'Перегруз'].includes(e.category));
                 if (order.paymentStatus === 'Просрочка' || hasProblematicExpenses) problemsCount++;
             });
-
             document.getElementById('dash-total').innerText = totalOrders;
             document.getElementById('dash-margin').innerText = totalMargin.toLocaleString() + ' ₽';
             document.getElementById('dash-problems').innerText = problemsCount;
@@ -266,6 +259,7 @@
                     <td>${expensesHtml}</td>
                     <td class="${marginClass}">${finalMargin.toLocaleString()} ₽</td>
                     <td>
+                        <button class="btn-small btn-orange" onclick="openDocsModal(${order.id})" style="margin-bottom: 5px; color: white;">📄 Документы</button>
                         <button class="btn-small btn-blue" onclick="openEditModal(${order.id})">✏️ Изменить</button>
                         <button class="btn-small btn-cancel" onclick="deleteOrder(${order.id})">🗑️ Удалить</button>
                     </td>
@@ -276,91 +270,92 @@
 
         function filterOrders() {
             const query = document.getElementById('search-input').value.toLowerCase();
-            const filteredData = globalOrders.filter(order => 
-                order.clientName.toLowerCase().includes(query) ||
-                order.contractorName.toLowerCase().includes(query) ||
-                (order.route && order.route.toLowerCase().includes(query))
-            );
+            const filteredData = globalOrders.filter(order => order.clientName.toLowerCase().includes(query) || order.contractorName.toLowerCase().includes(query) || (order.route && order.route.toLowerCase().includes(query)));
             renderTable(filteredData); 
         }
 
         function loadOrders() {
-            fetch('/api/orders')
-                .then(res => res.json())
-                .then(data => {
-                    globalOrders = data.data; 
-                    filterOrders(); 
-                });
+            fetch('/api/orders').then(res => res.json()).then(data => { globalOrders = data.data; filterOrders(); });
         }
 
         document.getElementById('add-order-form').addEventListener('submit', function(e) {
             e.preventDefault(); 
-            const newOrderData = {
-                orderDate: document.getElementById('f-date').value,
-                clientName: document.getElementById('f-client').value,
-                contractorName: document.getElementById('f-contractor').value,
-                route: document.getElementById('f-route').value,
-                clientRate: document.getElementById('f-client-rate').value,
-                contractorRate: document.getElementById('f-contractor-rate').value
-            };
-            fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newOrderData) })
-            .then(() => { document.getElementById('add-order-form').reset(); loadOrders(); });
+            const newOrderData = { orderDate: document.getElementById('f-date').value, clientName: document.getElementById('f-client').value, contractorName: document.getElementById('f-contractor').value, route: document.getElementById('f-route').value, clientRate: document.getElementById('f-client-rate').value, contractorRate: document.getElementById('f-contractor-rate').value };
+            fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newOrderData) }).then(() => { document.getElementById('add-order-form').reset(); loadOrders(); });
         });
 
-        function updatePaymentStatus(orderId, newStatus) {
-            fetch(`/api/orders/${orderId}/status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus }) }).then(() => loadOrders());
-        }
-
+        function updatePaymentStatus(orderId, newStatus) { fetch(`/api/orders/${orderId}/status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus }) }).then(() => loadOrders()); }
         function openExpenseModal(orderId) { currentOrderId = orderId; document.getElementById('modal-amount').value = ''; document.getElementById('expense-modal').style.display = 'flex'; }
         function closeExpenseModal() { document.getElementById('expense-modal').style.display = 'none'; }
-        
-        function submitExpense() {
-            const category = document.getElementById('modal-category').value;
-            const amount = document.getElementById('modal-amount').value;
-            if (!amount || amount <= 0) return alert("Ошибка: введите корректную сумму!");
-            fetch(`/api/orders/${currentOrderId}/expenses`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ category: category, amount: amount }) })
-            .then(() => { closeExpenseModal(); loadOrders(); });
-        }
-
-        function deleteOrder(orderId) {
-            if(confirm("Вы уверены, что хотите удалить этот рейс?")) { fetch(`/api/orders/${orderId}`, { method: 'DELETE' }).then(() => loadOrders()); }
-        }
-
-        function openEditModal(orderId) {
-            currentOrderId = orderId;
-            const order = globalOrders.find(o => o.id === orderId);
-            document.getElementById('e-date').value = order.orderDate; document.getElementById('e-client').value = order.clientName;
-            document.getElementById('e-contractor').value = order.contractorName; document.getElementById('e-route').value = order.route;
-            document.getElementById('e-client-rate').value = order.clientRate; document.getElementById('e-contractor-rate').value = order.contractorRate;
-            document.getElementById('edit-modal').style.display = 'flex';
-        }
+        function submitExpense() { const category = document.getElementById('modal-category').value; const amount = document.getElementById('modal-amount').value; if (!amount || amount <= 0) return alert("Ошибка: введите корректную сумму!"); fetch(`/api/orders/${currentOrderId}/expenses`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ category: category, amount: amount }) }).then(() => { closeExpenseModal(); loadOrders(); }); }
+        function deleteOrder(orderId) { if(confirm("Вы уверены, что хотите удалить этот рейс?")) { fetch(`/api/orders/${orderId}`, { method: 'DELETE' }).then(() => loadOrders()); } }
+        function openEditModal(orderId) { currentOrderId = orderId; const order = globalOrders.find(o => o.id === orderId); document.getElementById('e-date').value = order.orderDate; document.getElementById('e-client').value = order.clientName; document.getElementById('e-contractor').value = order.contractorName; document.getElementById('e-route').value = order.route; document.getElementById('e-client-rate').value = order.clientRate; document.getElementById('e-contractor-rate').value = order.contractorRate; document.getElementById('edit-modal').style.display = 'flex'; }
         function closeEditModal() { document.getElementById('edit-modal').style.display = 'none'; }
-
-        function submitEdit() {
-            const updatedData = {
-                orderDate: document.getElementById('e-date').value, clientName: document.getElementById('e-client').value,
-                contractorName: document.getElementById('e-contractor').value, route: document.getElementById('e-route').value,
-                clientRate: document.getElementById('e-client-rate').value, contractorRate: document.getElementById('e-contractor-rate').value
-            };
-            fetch(`/api/orders/${currentOrderId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updatedData) })
-            .then(() => { closeEditModal(); loadOrders(); });
+        function submitEdit() { const updatedData = { orderDate: document.getElementById('e-date').value, clientName: document.getElementById('e-client').value, contractorName: document.getElementById('e-contractor').value, route: document.getElementById('e-route').value, clientRate: document.getElementById('e-client-rate').value, contractorRate: document.getElementById('e-contractor-rate').value }; fetch(`/api/orders/${currentOrderId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updatedData) }).then(() => { closeEditModal(); loadOrders(); }); }
+        
+        function exportToExcel() {
+            const excelData = globalOrders.map(order => { const totalExtra = order.extraExpenses ? order.extraExpenses.reduce((sum, exp) => sum + exp.amount, 0) : 0; const finalMargin = order.clientRate - order.contractorRate - totalExtra; const expensesText = order.extraExpenses && order.extraExpenses.length > 0 ? order.extraExpenses.map(e => `${e.category}: ${e.amount} руб.`).join(' | ') : "Нет расходов"; return { "Дата заявки": order.orderDate, "Клиент": order.clientName, "Подрядчик": order.contractorName, "Маршрут": order.route || "Не указан", "Ставка клиента (руб)": Number(order.clientRate), "Ставка подрядчика (руб)": Number(order.contractorRate), "Статус оплаты": order.paymentStatus, "Доп. расходы": expensesText, "Чистая Прибыль (руб)": finalMargin }; });
+            const worksheet = XLSX.utils.json_to_sheet(excelData); const workbook = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(workbook, worksheet, "Отчет по рейсам"); const dateStr = new Date().toLocaleDateString('ru-RU').replace(/\./g, '-'); XLSX.writeFile(workbook, `Логистика_Отчет_${dateStr}.xlsx`);
         }
 
-        function exportToExcel() {
-            const excelData = globalOrders.map(order => {
-                const totalExtra = order.extraExpenses ? order.extraExpenses.reduce((sum, exp) => sum + exp.amount, 0) : 0;
-                const finalMargin = order.clientRate - order.contractorRate - totalExtra;
-                const expensesText = order.extraExpenses && order.extraExpenses.length > 0 ? order.extraExpenses.map(e => `${e.category}: ${e.amount} руб.`).join(' | ') : "Нет расходов";
-                return {
-                    "Дата заявки": order.orderDate, "Клиент": order.clientName, "Подрядчик": order.contractorName, "Маршрут": order.route || "Не указан",
-                    "Ставка клиента (руб)": Number(order.clientRate), "Ставка подрядчика (руб)": Number(order.contractorRate), "Статус оплаты": order.paymentStatus,
-                    "Доп. расходы": expensesText, "Чистая Прибыль (руб)": finalMargin
-                };
-            });
-            const worksheet = XLSX.utils.json_to_sheet(excelData); const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Отчет по рейсам");
-            const dateStr = new Date().toLocaleDateString('ru-RU').replace(/\./g, '-');
-            XLSX.writeFile(workbook, `Логистика_Отчет_${dateStr}.xlsx`);
+        // --- ЛОГИКА ГЕНЕРАЦИИ ДОКУМЕНТОВ ---
+        function openDocsModal(orderId) {
+            currentOrderId = orderId;
+            document.getElementById('docs-modal').style.display = 'flex';
+        }
+        function closeDocsModal() {
+            document.getElementById('docs-modal').style.display = 'none';
+        }
+
+        // 1. Формирование Счета клиенту
+        function generateInvoice() {
+            const order = globalOrders.find(o => o.id === currentOrderId);
+            if(!order) return;
+            const invNumber = order.id + 1000; // Просто генерируем красивый номер
+            const dateStr = new Date().toLocaleDateString('ru-RU');
+            
+            const html = `<html><head><meta charset="UTF-8"><title>Счет №${invNumber}</title><style>body{font-family:'Arial',sans-serif; padding:40px; color:#000; line-height:1.6; font-size:14px; max-width:800px; margin:auto;} .header{font-size:22px; font-weight:bold; margin-bottom:20px; border-bottom:2px solid #000; padding-bottom:10px;} table{width:100%; border-collapse:collapse; margin-top:20px;} th,td{border:1px solid #000; padding:12px; text-align:left;} th{background:#f4f4f4;} .sum{text-align:right; font-size:18px; font-weight:bold; margin-top:20px;} .sign{margin-top:60px;}</style></head><body>
+            <div class="header">СЧЕТ НА ОПЛАТУ № ${invNumber} от ${dateStr}</div>
+            <p><b>Исполнитель:</b> Наша Транспортная Компания</p>
+            <p><b>Заказчик:</b> ${order.clientName}</p>
+            <p><b>Основание:</b> Перевозка груза от ${order.orderDate.split('-').reverse().join('.')}</p>
+            <table>
+                <tr><th>№</th><th>Наименование услуги</th><th>Маршрут</th><th>Сумма (руб)</th></tr>
+                <tr><td>1</td><td>Транспортно-экспедиционные услуги</td><td>${order.route}</td><td>${Number(order.clientRate).toLocaleString()}</td></tr>
+            </table>
+            <div class="sum">Итого к оплате: ${Number(order.clientRate).toLocaleString()} руб. (Без НДС)</div>
+            <div class="sign"><p>Руководитель _________________ / Подпись /</p></div>
+            <script>window.print();<\/script></body></html>`;
+            
+            const blob = new Blob([html], { type: 'text/html;charset=utf-8' }); 
+            window.open(URL.createObjectURL(blob), '_blank');
+            closeDocsModal();
+        }
+
+        // 2. Формирование Заявки Подрядчику
+        function generateContractorOrder() {
+            const order = globalOrders.find(o => o.id === currentOrderId);
+            if(!order) return;
+            const reqNumber = order.id + 500; 
+            
+            const html = `<html><head><meta charset="UTF-8"><title>Заявка №${reqNumber}</title><style>body{font-family:'Arial',sans-serif; padding:40px; color:#000; line-height:1.6; font-size:14px; max-width:800px; margin:auto;} .header{font-size:20px; font-weight:bold; margin-bottom:20px; text-align:center; text-transform:uppercase;} table{width:100%; border-collapse:collapse; margin-top:10px;} th,td{border:1px solid #000; padding:10px; text-align:left;} th{background:#f4f4f4; width:30%;} .sign{display:flex; justify-content:space-between; margin-top:50px;}</style></head><body>
+            <div class="header">Договор-заявка на перевозку груза № ${reqNumber}</div>
+            <table>
+                <tr><th>Дата заявки</th><td>${order.orderDate.split('-').reverse().join('.')}</td></tr>
+                <tr><th>Заказчик (Экспедитор)</th><td>Наша Транспортная Компания</td></tr>
+                <tr><th>Перевозчик (Подрядчик)</th><td>${order.contractorName}</td></tr>
+                <tr><th>Маршрут движения</th><td>${order.route}</td></tr>
+                <tr><th>Ставка за рейс</th><td><b>${Number(order.contractorRate).toLocaleString()} руб.</b></td></tr>
+            </table>
+            <div class="sign">
+                <div><b>От Заказчика:</b><br><br>_________________ / М.П. /</div>
+                <div><b>От Перевозчика:</b><br><br>_________________ / М.П. /</div>
+            </div>
+            <script>window.print();<\/script></body></html>`;
+            
+            const blob = new Blob([html], { type: 'text/html;charset=utf-8' }); 
+            window.open(URL.createObjectURL(blob), '_blank');
+            closeDocsModal();
         }
     </script>
 </body>
