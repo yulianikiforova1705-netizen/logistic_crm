@@ -1,25 +1,22 @@
 // backend/server.js
 const express = require('express');
 const path = require('path');
-const { Pool } = require('pg'); // Подключаем библиотеку для работы с базой
-const config = require('./config');
+const { Pool } = require('pg'); 
 
 const app = express();
 const PORT = 3000;
 
-// ТВОЯ ССЫЛКА ДЛЯ ПОДКЛЮЧЕНИЯ (вставь её сюда)
-const DATABASE_URL = 'postgresql://neondb_owner:npg_ZF8YphcWLGB1@ep-tiny-wave-ald7394w-pooler.c-3.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require';
+// postgresql://neondb_owner:npg_ZF8YphcWLGB1@ep-tiny-wave-ald7394w-pooler.c-3.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+const DATABASE_URL = 'postgresql://neondb_owner:npg_ZF8YphcWLGB1@ep-tiny-wave-ald7394w-pooler.c-3.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=requireс';
 
-// Настройка подключения к облаку
 const pool = new Pool({
     connectionString: DATABASE_URL,
-    ssl: { rejectUnauthorized: false } // Обязательно для облачных баз вроде Neon
+    ssl: { rejectUnauthorized: false } 
 });
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../frontend')));
 
-// Функция для создания таблицы в облаке (запустится один раз при старте)
 const initDB = async () => {
     try {
         await pool.query(`
@@ -35,7 +32,9 @@ const initDB = async () => {
                 extra_expenses JSONB DEFAULT '[]'
             );
         `);
-        console.log("✅ Таблица в облаке готова к работе");
+        // Умное обновление таблицы: добавляем колонку истории, если её еще нет
+        await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS history JSONB DEFAULT '[]'`);
+        console.log("✅ База данных обновлена и готова к работе");
     } catch (err) {
         console.error("❌ Ошибка инициализации базы:", err);
     }
@@ -43,11 +42,18 @@ const initDB = async () => {
 
 initDB();
 
-// 1. ПОЛУЧИТЬ все заявки из базы
+app.post('/api/login', (req, res) => {
+    const { username, password } = req.body;
+    if (username === 'admin' && password === '12345') {
+        res.json({ status: "success", token: "secret-crm-token-8899" });
+    } else {
+        res.status(401).json({ status: "error", message: "Неверный логин или пароль" });
+    }
+});
+
 app.get('/api/orders', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM orders ORDER BY id DESC');
-        // Превращаем названия из БД в те, что ждет наш фронтенд
         const formattedData = result.rows.map(row => ({
             id: row.id,
             orderDate: row.order_date.toISOString().split('T')[0],
@@ -57,7 +63,8 @@ app.get('/api/orders', async (req, res) => {
             clientRate: Number(row.client_rate),
             contractorRate: Number(row.contractor_rate),
             paymentStatus: row.payment_status,
-            extraExpenses: row.extra_expenses || []
+            extraExpenses: row.extra_expenses || [],
+            history: row.history || [] // Выгружаем историю
         }));
         res.json({ status: "success", data: formattedData });
     } catch (err) {
@@ -65,7 +72,6 @@ app.get('/api/orders', async (req, res) => {
     }
 });
 
-// 2. ДОБАВИТЬ заявку в базу
 app.post('/api/orders', async (req, res) => {
     const { orderDate, clientName, contractorName, route, clientRate, contractorRate } = req.body;
     try {
@@ -79,67 +85,43 @@ app.post('/api/orders', async (req, res) => {
     }
 });
 
-// 3. ИЗМЕНИТЬ статус (Светофор)
 app.patch('/api/orders/:id/status', async (req, res) => {
-    const { id } = req.params;
-    const { status } = req.body;
-    try {
-        await pool.query('UPDATE orders SET payment_status = $1 WHERE id = $2', [status, id]);
-        res.json({ status: "success" });
-    } catch (err) {
-        res.status(500).json({ status: "error", message: err.message });
-    }
+    const { id } = req.params; const { status } = req.body;
+    try { await pool.query('UPDATE orders SET payment_status = $1 WHERE id = $2', [status, id]); res.json({ status: "success" }); } 
+    catch (err) { res.status(500).json({ status: "error", message: err.message }); }
 });
 
-// 4. ДОБАВИТЬ расход
 app.post('/api/orders/:id/expenses', async (req, res) => {
-    const { id } = req.params;
-    const { category, amount } = req.body;
-    try {
-        // Хитрая операция: добавляем объект в JSON-массив прямо в базе
-        await pool.query(
-            "UPDATE orders SET extra_expenses = extra_expenses || $1::jsonb WHERE id = $2",
-            [JSON.stringify([{ category, amount: Number(amount) }]), id]
-        );
-        res.json({ status: "success" });
-    } catch (err) {
-        res.status(500).json({ status: "error", message: err.message });
-    }
-});
-// 5. УДАЛИТЬ заявку (DELETE)
-app.delete('/api/orders/:id', async (req, res) => {
-    try {
-        await pool.query('DELETE FROM orders WHERE id = $1', [req.params.id]);
-        res.json({ status: "success" });
-    } catch (err) {
-        res.status(500).json({ status: "error", message: err.message });
-    }
+    const { id } = req.params; const { category, amount } = req.body;
+    try { await pool.query("UPDATE orders SET extra_expenses = extra_expenses || $1::jsonb WHERE id = $2", [JSON.stringify([{ category, amount: Number(amount) }]), id]); res.json({ status: "success" }); } 
+    catch (err) { res.status(500).json({ status: "error", message: err.message }); }
 });
 
-// 6. ОБНОВИТЬ заявку (PUT - Редактирование)
 app.put('/api/orders/:id', async (req, res) => {
     const { orderDate, clientName, contractorName, route, clientRate, contractorRate } = req.body;
+    try { await pool.query('UPDATE orders SET order_date = $1, client_name = $2, contractor_name = $3, route = $4, client_rate = $5, contractor_rate = $6 WHERE id = $7', [orderDate, clientName, contractorName, route, clientRate, contractorRate, req.params.id]); res.json({ status: "success" }); } 
+    catch (err) { res.status(500).json({ status: "error", message: err.message }); }
+});
+
+app.delete('/api/orders/:id', async (req, res) => {
+    try { await pool.query('DELETE FROM orders WHERE id = $1', [req.params.id]); res.json({ status: "success" }); } 
+    catch (err) { res.status(500).json({ status: "error", message: err.message }); }
+});
+
+// НОВЫЙ МАРШРУТ: Добавление записи в историю рейса
+app.post('/api/orders/:id/history', async (req, res) => {
+    const { id } = req.params; const { text } = req.body;
     try {
+        const dateStr = new Date().toISOString();
+        // COALESCE гарантирует, что если колонки не было, она станет массивом перед добавлением
         await pool.query(
-            'UPDATE orders SET order_date = $1, client_name = $2, contractor_name = $3, route = $4, client_rate = $5, contractor_rate = $6 WHERE id = $7',
-            [orderDate, clientName, contractorName, route, clientRate, contractorRate, req.params.id]
+            "UPDATE orders SET history = COALESCE(history, '[]'::jsonb) || $1::jsonb WHERE id = $2",
+            [JSON.stringify([{ date: dateStr, text: text }]), id]
         );
         res.json({ status: "success" });
     } catch (err) {
         res.status(500).json({ status: "error", message: err.message });
     }
 });
-// 7. АВТОРИЗАЦИЯ (Вход в систему)
-app.post('/api/login', (req, res) => {
-    const { username, password } = req.body;
-    
-    // Для MVP задаем пароль прямо здесь
-    if (username === 'admin' && password === '12345') {
-        // Если всё верно, выдаем успешный ответ и "токен"
-        res.json({ status: "success", token: "secret-crm-token-8899" });
-    } else {
-        // Если ошибка, возвращаем статус 401 (Отказано в доступе)
-        res.status(401).json({ status: "error", message: "Неверный логин или пароль" });
-    }
-});
+
 app.listen(PORT, () => console.log(`🚀 Сервер на PostgreSQL запущен на порту ${PORT}`));

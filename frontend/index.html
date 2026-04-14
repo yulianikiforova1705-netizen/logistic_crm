@@ -52,6 +52,7 @@
         .btn-blue { background-color: #007bff; }
         .btn-orange { background-color: #fd7e14; }
         .btn-cancel { background-color: #dc3545; }
+        .btn-purple { background-color: #6f42c1; color: white; }
         .btn-excel { background-color: #198754; font-size: 14px; padding: 12px 20px; }
         
         .margin-val { font-weight: bold; color: #28a745; font-size: 14px; }
@@ -61,6 +62,18 @@
         .modal-box { background: white; padding: 25px; border-radius: 8px; width: 350px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
         .modal-box h3 { margin-top: 0; border-bottom: 2px solid #007bff; padding-bottom: 10px; margin-bottom: 15px; }
         .modal-btn-group { display: flex; justify-content: space-between; margin-top: 20px; }
+
+        /* СТИЛИ ДЛЯ ДОСЬЕ И ТАЙМЛАЙНА */
+        .timeline { margin-top: 15px; padding-left: 15px; border-left: 2px solid #e1e4e8; max-height: 250px; overflow-y: auto; }
+        .tl-item { position: relative; margin-bottom: 15px; font-size: 12px; }
+        .tl-dot { position: absolute; left: -20px; top: 4px; width: 8px; height: 8px; border-radius: 50%; background: #6f42c1; box-shadow: 0 0 0 3px white; }
+        .tl-date { font-size: 10px; color: #6c757d; font-weight: bold; margin-bottom: 4px; }
+        .tl-text { background: #f8f9fa; padding: 10px; border-radius: 6px; border: 1px solid #e1e4e8; color: #333; }
+        
+        /* КНОПКА МИКРОФОНА */
+        .mic-btn { background: #e0f8e9; border: 1px solid #28a745; color: #28a745; width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.3s; font-size: 18px; }
+        .mic-btn.recording { background: #dc3545; border-color: #dc3545; color: white; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); box-shadow: 0 0 10px rgba(220,53,69,0.5); } 100% { transform: scale(1); } }
     </style>
 </head>
 <body>
@@ -104,7 +117,7 @@
             </div>
 
             <div class="toolbar">
-                <input type="text" id="search-input" class="search-box" placeholder="🔍 Умный поиск: введите имя клиента, подрядчика или маршрут..." oninput="filterOrders()">
+                <input type="text" id="search-input" class="search-box" placeholder="🔍 Умный поиск..." oninput="filterOrders()">
                 <button class="btn-excel" onclick="exportToExcel()">📊 Скачать в Excel</button>
             </div>
 
@@ -126,96 +139,42 @@
         </div>
     </div>
 
-    <div class="modal-overlay" id="expense-modal">
-        <div class="modal-box">
-            <h3>Добавить расход</h3>
-            <div class="form-group" style="margin-bottom: 10px;">
-                <label>Категория</label>
-                <select id="modal-category">
-                    <option value="Штраф">Штраф</option><option value="Простой">Простой</option><option value="Перегруз">Перегруз</option>
-                    <option value="Опоздание">Опоздание</option><option value="Страховка">Страховка</option><option value="Прочее">Прочее</option>
-                </select>
-            </div>
-            <div class="form-group"><label>Сумма (руб)</label><input type="number" id="modal-amount"></div>
-            <div class="modal-btn-group">
-                <button class="btn-cancel" onclick="closeExpenseModal()">Отмена</button>
-                <button onclick="submitExpense()">Сохранить</button>
-            </div>
-        </div>
-    </div>
+    <div class="modal-overlay" id="expense-modal"><div class="modal-box"><h3>Добавить расход</h3><div class="form-group" style="margin-bottom: 10px;"><label>Категория</label><select id="modal-category"><option value="Штраф">Штраф</option><option value="Простой">Простой</option><option value="Перегруз">Перегруз</option><option value="Опоздание">Опоздание</option><option value="Страховка">Страховка</option><option value="Прочее">Прочее</option></select></div><div class="form-group"><label>Сумма (руб)</label><input type="number" id="modal-amount"></div><div class="modal-btn-group"><button class="btn-cancel" onclick="closeExpenseModal()">Отмена</button><button onclick="submitExpense()">Сохранить</button></div></div></div>
+    
+    <div class="modal-overlay" id="edit-modal"><div class="modal-box" style="width: 450px;"><h3>✏️ Редактировать рейс</h3><div class="form-grid" style="grid-template-columns: 1fr 1fr;"><div class="form-group"><label>Дата заявки</label><input type="date" id="e-date"></div><div class="form-group"><label>Маршрут</label><input type="text" id="e-route"></div><div class="form-group"><label>Клиент</label><input type="text" id="e-client"></div><div class="form-group"><label>Подрядчик</label><input type="text" id="e-contractor"></div><div class="form-group"><label>Ставка клиента</label><input type="number" id="e-client-rate"></div><div class="form-group"><label>Ставка подрядчика</label><input type="number" id="e-contractor-rate"></div></div><div class="modal-btn-group"><button class="btn-cancel" onclick="closeEditModal()">Отмена</button><button class="btn-blue" onclick="submitEdit()">Сохранить</button></div></div></div>
+    
+    <div class="modal-overlay" id="docs-modal"><div class="modal-box" style="width: 320px;"><h3 style="border-bottom-color: #fd7e14;">📄 Печать документов</h3><div style="display: flex; flex-direction: column; gap: 10px;"><button class="btn-blue" onclick="generateInvoice()" style="width: 100%; padding: 12px;">🧾 Счет Клиенту</button><button class="btn-orange" onclick="generateContractorOrder()" style="width: 100%; padding: 12px; color: white;">🚚 Заявка Перевозчику</button></div><div class="modal-btn-group" style="margin-top: 15px;"><button class="btn-cancel" onclick="closeDocsModal()" style="width: 100%;">Отмена</button></div></div></div>
 
-    <div class="modal-overlay" id="edit-modal">
-        <div class="modal-box" style="width: 450px;">
-            <h3>✏️ Редактировать рейс</h3>
-            <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
-                <div class="form-group"><label>Дата заявки</label><input type="date" id="e-date"></div>
-                <div class="form-group"><label>Маршрут</label><input type="text" id="e-route"></div>
-                <div class="form-group"><label>Клиент</label><input type="text" id="e-client"></div>
-                <div class="form-group"><label>Подрядчик</label><input type="text" id="e-contractor"></div>
-                <div class="form-group"><label>Ставка клиента</label><input type="number" id="e-client-rate"></div>
-                <div class="form-group"><label>Ставка подрядчика</label><input type="number" id="e-contractor-rate"></div>
+    <div class="modal-overlay" id="notes-modal">
+        <div class="modal-box" style="width: 400px;">
+            <h3 style="border-bottom-color: #6f42c1; color: #6f42c1;">📖 Досье рейса</h3>
+            
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <input type="text" id="n_new_note" class="form-group" style="flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 6px; outline: none;" placeholder="Текст или нажмите микрофон...">
+                <button id="micBtn" class="mic-btn" onclick="startVoiceRecognition()" title="Голосовой ввод">🎙️</button>
+                <button style="background: #007bff; color: white; border: none; padding: 0 15px; border-radius: 6px; cursor: pointer; font-weight: bold;" onclick="submitNote()">Отправить</button>
             </div>
-            <div class="modal-btn-group">
-                <button class="btn-cancel" onclick="closeEditModal()">Отмена</button>
-                <button class="btn-blue" onclick="submitEdit()">Сохранить изменения</button>
-            </div>
-        </div>
-    </div>
 
-    <div class="modal-overlay" id="docs-modal">
-        <div class="modal-box" style="width: 320px;">
-            <h3 style="border-bottom-color: #fd7e14;">📄 Печать документов</h3>
-            <p style="font-size: 13px; color: #666; margin-bottom: 15px;">Выберите нужный документ для загрузки в PDF:</p>
-            <div style="display: flex; flex-direction: column; gap: 10px;">
-                <button class="btn-blue" onclick="generateInvoice()" style="width: 100%; padding: 12px; font-size: 13px;">🧾 Счет Клиенту</button>
-                <button class="btn-orange" onclick="generateContractorOrder()" style="width: 100%; padding: 12px; font-size: 13px; color: white;">🚚 Заявка Перевозчику</button>
-            </div>
-            <div class="modal-btn-group" style="margin-top: 15px;">
-                <button class="btn-cancel" onclick="closeDocsModal()" style="width: 100%;">Отмена</button>
+            <div class="timeline" id="notes-timeline">
+                </div>
+
+            <div class="modal-btn-group">
+                <button class="btn-cancel" onclick="closeNotesModal()" style="width: 100%;">Закрыть</button>
             </div>
         </div>
     </div>
 
     <script>
-        function checkAuth() {
-            const token = localStorage.getItem('crm_token');
-            if (token) {
-                document.getElementById('login-screen').style.display = 'none';
-                document.getElementById('app-content').style.display = 'block';
-                loadOrders(); 
-            } else {
-                document.getElementById('login-screen').style.display = 'flex';
-                document.getElementById('app-content').style.display = 'none';
-            }
-        }
-
-        function attemptLogin() {
-            const user = document.getElementById('login-username').value;
-            const pass = document.getElementById('login-password').value;
-            fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: user, password: pass }) })
-            .then(res => res.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    localStorage.setItem('crm_token', data.token);
-                    document.getElementById('login-error').style.display = 'none';
-                    checkAuth();
-                } else {
-                    document.getElementById('login-error').style.display = 'block';
-                }
-            });
-        }
-
+        // АВТОРИЗАЦИЯ
+        function checkAuth() { const token = localStorage.getItem('crm_token'); if (token) { document.getElementById('login-screen').style.display = 'none'; document.getElementById('app-content').style.display = 'block'; loadOrders(); } else { document.getElementById('login-screen').style.display = 'flex'; document.getElementById('app-content').style.display = 'none'; } }
+        function attemptLogin() { const user = document.getElementById('login-username').value; const pass = document.getElementById('login-password').value; fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: user, password: pass }) }).then(res => res.json()).then(data => { if (data.status === 'success') { localStorage.setItem('crm_token', data.token); document.getElementById('login-error').style.display = 'none'; checkAuth(); } else { document.getElementById('login-error').style.display = 'block'; } }); }
         function logout() { localStorage.removeItem('crm_token'); checkAuth(); }
         checkAuth();
 
         let globalOrders = []; 
         let currentOrderId = null; 
 
-        function getColorClass(status) {
-            if(status === 'Оплачено') return 'status-green';
-            if(status === 'Просрочка') return 'status-red';
-            return 'status-yellow'; 
-        }
+        function getColorClass(status) { if(status === 'Оплачено') return 'status-green'; if(status === 'Просрочка') return 'status-red'; return 'status-yellow'; }
 
         function updateDashboard(data) {
             let totalOrders = data.length; let totalMargin = 0; let problemsCount = 0;
@@ -225,9 +184,7 @@
                 const hasProblematicExpenses = order.extraExpenses && order.extraExpenses.some(e => ['Штраф', 'Простой', 'Опоздание', 'Перегруз'].includes(e.category));
                 if (order.paymentStatus === 'Просрочка' || hasProblematicExpenses) problemsCount++;
             });
-            document.getElementById('dash-total').innerText = totalOrders;
-            document.getElementById('dash-margin').innerText = totalMargin.toLocaleString() + ' ₽';
-            document.getElementById('dash-problems').innerText = problemsCount;
+            document.getElementById('dash-total').innerText = totalOrders; document.getElementById('dash-margin').innerText = totalMargin.toLocaleString() + ' ₽'; document.getElementById('dash-problems').innerText = problemsCount;
         }
 
         function renderTable(dataToRender) {
@@ -259,6 +216,7 @@
                     <td>${expensesHtml}</td>
                     <td class="${marginClass}">${finalMargin.toLocaleString()} ₽</td>
                     <td>
+                        <button class="btn-small btn-purple" onclick="openNotesModal(${order.id})" style="margin-bottom: 5px;">📖 Досье</button>
                         <button class="btn-small btn-orange" onclick="openDocsModal(${order.id})" style="margin-bottom: 5px; color: white;">📄 Документы</button>
                         <button class="btn-small btn-blue" onclick="openEditModal(${order.id})">✏️ Изменить</button>
                         <button class="btn-small btn-cancel" onclick="deleteOrder(${order.id})">🗑️ Удалить</button>
@@ -274,9 +232,7 @@
             renderTable(filteredData); 
         }
 
-        function loadOrders() {
-            fetch('/api/orders').then(res => res.json()).then(data => { globalOrders = data.data; filterOrders(); });
-        }
+        function loadOrders() { fetch('/api/orders').then(res => res.json()).then(data => { globalOrders = data.data; filterOrders(); }); }
 
         document.getElementById('add-order-form').addEventListener('submit', function(e) {
             e.preventDefault(); 
@@ -292,70 +248,96 @@
         function openEditModal(orderId) { currentOrderId = orderId; const order = globalOrders.find(o => o.id === orderId); document.getElementById('e-date').value = order.orderDate; document.getElementById('e-client').value = order.clientName; document.getElementById('e-contractor').value = order.contractorName; document.getElementById('e-route').value = order.route; document.getElementById('e-client-rate').value = order.clientRate; document.getElementById('e-contractor-rate').value = order.contractorRate; document.getElementById('edit-modal').style.display = 'flex'; }
         function closeEditModal() { document.getElementById('edit-modal').style.display = 'none'; }
         function submitEdit() { const updatedData = { orderDate: document.getElementById('e-date').value, clientName: document.getElementById('e-client').value, contractorName: document.getElementById('e-contractor').value, route: document.getElementById('e-route').value, clientRate: document.getElementById('e-client-rate').value, contractorRate: document.getElementById('e-contractor-rate').value }; fetch(`/api/orders/${currentOrderId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updatedData) }).then(() => { closeEditModal(); loadOrders(); }); }
-        
-        function exportToExcel() {
-            const excelData = globalOrders.map(order => { const totalExtra = order.extraExpenses ? order.extraExpenses.reduce((sum, exp) => sum + exp.amount, 0) : 0; const finalMargin = order.clientRate - order.contractorRate - totalExtra; const expensesText = order.extraExpenses && order.extraExpenses.length > 0 ? order.extraExpenses.map(e => `${e.category}: ${e.amount} руб.`).join(' | ') : "Нет расходов"; return { "Дата заявки": order.orderDate, "Клиент": order.clientName, "Подрядчик": order.contractorName, "Маршрут": order.route || "Не указан", "Ставка клиента (руб)": Number(order.clientRate), "Ставка подрядчика (руб)": Number(order.contractorRate), "Статус оплаты": order.paymentStatus, "Доп. расходы": expensesText, "Чистая Прибыль (руб)": finalMargin }; });
-            const worksheet = XLSX.utils.json_to_sheet(excelData); const workbook = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(workbook, worksheet, "Отчет по рейсам"); const dateStr = new Date().toLocaleDateString('ru-RU').replace(/\./g, '-'); XLSX.writeFile(workbook, `Логистика_Отчет_${dateStr}.xlsx`);
-        }
+        function exportToExcel() { const excelData = globalOrders.map(order => { const totalExtra = order.extraExpenses ? order.extraExpenses.reduce((sum, exp) => sum + exp.amount, 0) : 0; const finalMargin = order.clientRate - order.contractorRate - totalExtra; const expensesText = order.extraExpenses && order.extraExpenses.length > 0 ? order.extraExpenses.map(e => `${e.category}: ${e.amount} руб.`).join(' | ') : "Нет расходов"; return { "Дата заявки": order.orderDate, "Клиент": order.clientName, "Подрядчик": order.contractorName, "Маршрут": order.route || "Не указан", "Ставка клиента (руб)": Number(order.clientRate), "Ставка подрядчика (руб)": Number(order.contractorRate), "Статус оплаты": order.paymentStatus, "Доп. расходы": expensesText, "Чистая Прибыль (руб)": finalMargin }; }); const worksheet = XLSX.utils.json_to_sheet(excelData); const workbook = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(workbook, worksheet, "Отчет по рейсам"); const dateStr = new Date().toLocaleDateString('ru-RU').replace(/\./g, '-'); XLSX.writeFile(workbook, `Логистика_Отчет_${dateStr}.xlsx`); }
 
-        // --- ЛОГИКА ГЕНЕРАЦИИ ДОКУМЕНТОВ ---
-        function openDocsModal(orderId) {
+        // ДОКУМЕНТЫ
+        function openDocsModal(orderId) { currentOrderId = orderId; document.getElementById('docs-modal').style.display = 'flex'; }
+        function closeDocsModal() { document.getElementById('docs-modal').style.display = 'none'; }
+        function generateInvoice() { const order = globalOrders.find(o => o.id === currentOrderId); if(!order) return; const invNumber = order.id + 1000; const dateStr = new Date().toLocaleDateString('ru-RU'); const html = `<html><head><meta charset="UTF-8"><title>Счет №${invNumber}</title><style>body{font-family:'Arial',sans-serif; padding:40px; color:#000; line-height:1.6; font-size:14px; max-width:800px; margin:auto;} .header{font-size:22px; font-weight:bold; margin-bottom:20px; border-bottom:2px solid #000; padding-bottom:10px;} table{width:100%; border-collapse:collapse; margin-top:20px;} th,td{border:1px solid #000; padding:12px; text-align:left;} th{background:#f4f4f4;} .sum{text-align:right; font-size:18px; font-weight:bold; margin-top:20px;} .sign{margin-top:60px;}</style></head><body><div class="header">СЧЕТ НА ОПЛАТУ № ${invNumber} от ${dateStr}</div><p><b>Исполнитель:</b> Наша Транспортная Компания</p><p><b>Заказчик:</b> ${order.clientName}</p><p><b>Основание:</b> Перевозка груза от ${order.orderDate.split('-').reverse().join('.')}</p><table><tr><th>№</th><th>Наименование услуги</th><th>Маршрут</th><th>Сумма (руб)</th></tr><tr><td>1</td><td>Транспортно-экспедиционные услуги</td><td>${order.route}</td><td>${Number(order.clientRate).toLocaleString()}</td></tr></table><div class="sum">Итого к оплате: ${Number(order.clientRate).toLocaleString()} руб. (Без НДС)</div><div class="sign"><p>Руководитель _________________ / Подпись /</p></div><script>window.print();<\/script></body></html>`; const blob = new Blob([html], { type: 'text/html;charset=utf-8' }); window.open(URL.createObjectURL(blob), '_blank'); closeDocsModal(); }
+        function generateContractorOrder() { const order = globalOrders.find(o => o.id === currentOrderId); if(!order) return; const reqNumber = order.id + 500; const html = `<html><head><meta charset="UTF-8"><title>Заявка №${reqNumber}</title><style>body{font-family:'Arial',sans-serif; padding:40px; color:#000; line-height:1.6; font-size:14px; max-width:800px; margin:auto;} .header{font-size:20px; font-weight:bold; margin-bottom:20px; text-align:center; text-transform:uppercase;} table{width:100%; border-collapse:collapse; margin-top:10px;} th,td{border:1px solid #000; padding:10px; text-align:left;} th{background:#f4f4f4; width:30%;} .sign{display:flex; justify-content:space-between; margin-top:50px;}</style></head><body><div class="header">Договор-заявка на перевозку груза № ${reqNumber}</div><table><tr><th>Дата заявки</th><td>${order.orderDate.split('-').reverse().join('.')}</td></tr><tr><th>Заказчик (Экспедитор)</th><td>Наша Транспортная Компания</td></tr><tr><th>Перевозчик (Подрядчик)</th><td>${order.contractorName}</td></tr><tr><th>Маршрут движения</th><td>${order.route}</td></tr><tr><th>Ставка за рейс</th><td><b>${Number(order.contractorRate).toLocaleString()} руб.</b></td></tr></table><div class="sign"><div><b>От Заказчика:</b><br><br>_________________ / М.П. /</div><div><b>От Перевозчика:</b><br><br>_________________ / М.П. /</div></div><script>window.print();<\/script></body></html>`; const blob = new Blob([html], { type: 'text/html;charset=utf-8' }); window.open(URL.createObjectURL(blob), '_blank'); closeDocsModal(); }
+
+        // --- НОВАЯ ЛОГИКА: ДОСЬЕ И ГОЛОС ---
+        let voiceRec = null;
+
+        function openNotesModal(orderId) {
             currentOrderId = orderId;
-            document.getElementById('docs-modal').style.display = 'flex';
-        }
-        function closeDocsModal() {
-            document.getElementById('docs-modal').style.display = 'none';
-        }
-
-        // 1. Формирование Счета клиенту
-        function generateInvoice() {
-            const order = globalOrders.find(o => o.id === currentOrderId);
-            if(!order) return;
-            const invNumber = order.id + 1000; // Просто генерируем красивый номер
-            const dateStr = new Date().toLocaleDateString('ru-RU');
+            const order = globalOrders.find(o => o.id === orderId);
+            const tl = document.getElementById('notes-timeline');
+            tl.innerHTML = '';
             
-            const html = `<html><head><meta charset="UTF-8"><title>Счет №${invNumber}</title><style>body{font-family:'Arial',sans-serif; padding:40px; color:#000; line-height:1.6; font-size:14px; max-width:800px; margin:auto;} .header{font-size:22px; font-weight:bold; margin-bottom:20px; border-bottom:2px solid #000; padding-bottom:10px;} table{width:100%; border-collapse:collapse; margin-top:20px;} th,td{border:1px solid #000; padding:12px; text-align:left;} th{background:#f4f4f4;} .sum{text-align:right; font-size:18px; font-weight:bold; margin-top:20px;} .sign{margin-top:60px;}</style></head><body>
-            <div class="header">СЧЕТ НА ОПЛАТУ № ${invNumber} от ${dateStr}</div>
-            <p><b>Исполнитель:</b> Наша Транспортная Компания</p>
-            <p><b>Заказчик:</b> ${order.clientName}</p>
-            <p><b>Основание:</b> Перевозка груза от ${order.orderDate.split('-').reverse().join('.')}</p>
-            <table>
-                <tr><th>№</th><th>Наименование услуги</th><th>Маршрут</th><th>Сумма (руб)</th></tr>
-                <tr><td>1</td><td>Транспортно-экспедиционные услуги</td><td>${order.route}</td><td>${Number(order.clientRate).toLocaleString()}</td></tr>
-            </table>
-            <div class="sum">Итого к оплате: ${Number(order.clientRate).toLocaleString()} руб. (Без НДС)</div>
-            <div class="sign"><p>Руководитель _________________ / Подпись /</p></div>
-            <script>window.print();<\/script></body></html>`;
+            // Если есть история, выводим её (переворачиваем, чтобы новые были сверху)
+            if(order.history && order.history.length > 0) {
+                [...order.history].reverse().forEach(h => {
+                    const d = new Date(h.date);
+                    const formattedDate = `${d.toLocaleDateString('ru-RU')} в ${d.toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'})}`;
+                    tl.innerHTML += `<div class="tl-item"><div class="tl-dot"></div><div class="tl-date">${formattedDate}</div><div class="tl-text">${h.text}</div></div>`;
+                });
+            } else {
+                tl.innerHTML = '<div style="color: #666; font-size: 12px;">История пуста. Добавьте первую запись.</div>';
+            }
             
-            const blob = new Blob([html], { type: 'text/html;charset=utf-8' }); 
-            window.open(URL.createObjectURL(blob), '_blank');
-            closeDocsModal();
+            document.getElementById('n_new_note').value = '';
+            document.getElementById('notes-modal').style.display = 'flex';
         }
 
-        // 2. Формирование Заявки Подрядчику
-        function generateContractorOrder() {
-            const order = globalOrders.find(o => o.id === currentOrderId);
-            if(!order) return;
-            const reqNumber = order.id + 500; 
+        function closeNotesModal() {
+            document.getElementById('notes-modal').style.display = 'none';
+            if(voiceRec) voiceRec.stop(); // выключаем микрофон при закрытии
+        }
+
+        function submitNote() {
+            const text = document.getElementById('n_new_note').value.trim();
+            if(!text) return;
             
-            const html = `<html><head><meta charset="UTF-8"><title>Заявка №${reqNumber}</title><style>body{font-family:'Arial',sans-serif; padding:40px; color:#000; line-height:1.6; font-size:14px; max-width:800px; margin:auto;} .header{font-size:20px; font-weight:bold; margin-bottom:20px; text-align:center; text-transform:uppercase;} table{width:100%; border-collapse:collapse; margin-top:10px;} th,td{border:1px solid #000; padding:10px; text-align:left;} th{background:#f4f4f4; width:30%;} .sign{display:flex; justify-content:space-between; margin-top:50px;}</style></head><body>
-            <div class="header">Договор-заявка на перевозку груза № ${reqNumber}</div>
-            <table>
-                <tr><th>Дата заявки</th><td>${order.orderDate.split('-').reverse().join('.')}</td></tr>
-                <tr><th>Заказчик (Экспедитор)</th><td>Наша Транспортная Компания</td></tr>
-                <tr><th>Перевозчик (Подрядчик)</th><td>${order.contractorName}</td></tr>
-                <tr><th>Маршрут движения</th><td>${order.route}</td></tr>
-                <tr><th>Ставка за рейс</th><td><b>${Number(order.contractorRate).toLocaleString()} руб.</b></td></tr>
-            </table>
-            <div class="sign">
-                <div><b>От Заказчика:</b><br><br>_________________ / М.П. /</div>
-                <div><b>От Перевозчика:</b><br><br>_________________ / М.П. /</div>
-            </div>
-            <script>window.print();<\/script></body></html>`;
+            fetch(`/api/orders/${currentOrderId}/history`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text })
+            }).then(() => {
+                loadOrders(); // фоново обновляем данные
+                setTimeout(() => openNotesModal(currentOrderId), 200); // перезагружаем модалку, чтобы показать новую запись
+            });
+        }
+
+        // Логика распознавания речи
+        function startVoiceRecognition() {
+            const btn = document.getElementById('micBtn');
             
-            const blob = new Blob([html], { type: 'text/html;charset=utf-8' }); 
-            window.open(URL.createObjectURL(blob), '_blank');
-            closeDocsModal();
+            if (voiceRec) { 
+                voiceRec.stop(); 
+                return; 
+            }
+            
+            if(!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) { 
+                alert('К сожалению, ваш браузер не поддерживает голосовой ввод. Попробуйте Google Chrome или Yandex Browser.'); 
+                return; 
+            }
+            
+            const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+            voiceRec = new SpeechRec(); 
+            voiceRec.lang = 'ru-RU'; 
+            voiceRec.continuous = false; // останавливается, когда логист перестает говорить
+            
+            voiceRec.onstart = () => { 
+                btn.classList.add('recording'); 
+                btn.innerText = '🔴'; // Показываем, что идет запись
+            };
+            
+            voiceRec.onresult = (e) => {
+                const input = document.getElementById('n_new_note');
+                const text = e.results[0][0].transcript;
+                input.value = (input.value + ' ' + text).trim(); // Добавляем текст в поле ввода
+            };
+            
+            voiceRec.onerror = () => { alert('Ошибка микрофона. Убедитесь, что вы разрешили доступ к нему в браузере.'); };
+            
+            voiceRec.onend = () => { 
+                btn.classList.remove('recording'); 
+                btn.innerText = '🎙️'; 
+                voiceRec = null; 
+            };
+            
+            voiceRec.start();
         }
     </script>
 </body>
