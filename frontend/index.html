@@ -144,6 +144,7 @@
                 <input type="text" id="search-input" class="search-box" placeholder="🔍 Умный поиск..." oninput="filterOrders()">
                 <button class="btn-cyan" onclick="exportToJson()">💾 Скачать базу (JSON)</button>
                 <button class="btn-excel" onclick="exportToExcel()">📊 Скачать в Excel</button>
+            <button class="btn-orange" style="font-size: 14px; padding: 12px 20px;" onclick="exportTo1C()">🔄 Выгрузка для 1С (CSV)</button>
             </div>
 
             <div id="bulk-bar" style="display: none; background: #fff3cd; padding: 10px 15px; border: 1px solid #ffeeba; border-radius: 6px; margin-bottom: 10px; align-items: center; justify-content: space-between;">
@@ -425,6 +426,40 @@
         function submitNote() { const text = document.getElementById('n_new_note').value.trim(); if(!text) return; fetch(`/api/orders/${currentOrderId}/history`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: text }) }).then(() => { loadOrders(); setTimeout(() => openNotesModal(currentOrderId), 200); }); }
         function startVoiceRecognition() { const btn = document.getElementById('micBtn'); if (voiceRec) { voiceRec.stop(); return; } if(!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) { alert('К сожалению, ваш браузер не поддерживает голосовой ввод.'); return; } const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition; voiceRec = new SpeechRec(); voiceRec.lang = 'ru-RU'; voiceRec.continuous = false; voiceRec.onstart = () => { btn.classList.add('recording'); btn.innerText = '🔴'; }; voiceRec.onresult = (e) => { const input = document.getElementById('n_new_note'); input.value = (input.value + ' ' + e.results[0][0].transcript).trim(); }; voiceRec.onerror = () => { alert('Ошибка микрофона.'); }; voiceRec.onend = () => { btn.classList.remove('recording'); btn.innerText = '🎙️'; voiceRec = null; }; voiceRec.start(); }
         function uploadFile() { const fileInput = document.getElementById('n_file_upload'); const file = fileInput.files[0]; if(!file) return; const formData = new FormData(); formData.append('document', file); const tl = document.getElementById('notes-timeline'); tl.innerHTML = '<div style="text-align:center; padding:10px; color:#007bff; font-weight:bold;">Загрузка файла... ⏳</div>' + tl.innerHTML; fetch(`/api/orders/${currentOrderId}/history_file`, { method: 'POST', body: formData }).then(res => res.json()).then(data => { if (data.status === 'success') { fileInput.value = ''; loadOrders(); setTimeout(() => openNotesModal(currentOrderId), 300); } else { alert("Ошибка сервера: " + data.message); } }).catch(err => { alert("Сетевая ошибка"); }); }
-    </script>
+   // НОВАЯ ФУНКЦИЯ: Специальная выгрузка для загрузки в 1С
+        function exportTo1C() {
+            // \uFEFF - это метка BOM, чтобы 1С и Excel правильно читали русские буквы
+            let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; 
+            
+            // Строгие заголовки колонок, как любит 1С (без пробелов, разделены точкой с запятой)
+            csvContent += "НомерРейса;ДатаЗаявки;Клиент;Подрядчик;Маршрут;СтавкаКлиента;СтавкаПодрядчика;Валюта;СтатусОплаты\r\n";
+
+            globalOrders.forEach(order => {
+                // Оборачиваем текст в кавычки на случай, если в названии клиента есть запятые или точки с запятой
+                const row = [
+                    order.id,
+                    order.orderDate,
+                    `"${order.clientName}"`,
+                    `"${order.contractorName}"`,
+                    `"${order.route || ''}"`,
+                    order.clientRate,
+                    order.contractorRate,
+                    order.currency || '₽',
+                    order.paymentStatus
+                ];
+                csvContent += row.join(";") + "\r\n";
+            });
+
+            // Магия скачивания файла
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            const dateStr = new Date().toLocaleDateString('ru-RU').replace(/\./g, '-');
+            link.setAttribute("download", `Export_1C_${dateStr}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+   </script>
 </body>
 </html>
