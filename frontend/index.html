@@ -207,26 +207,36 @@
             const sortedMonths = Object.keys(marginByMonth).sort();
             const marginData = sortedMonths.map(m => marginByMonth[m]);
 
-            // Отрисовка Гистограммы (Маржа)
+         // Отрисовка Линейного графика (Маржа)
             if(chartMarginInst) chartMarginInst.destroy();
             const ctxM = document.getElementById('marginChart').getContext('2d');
             chartMarginInst = new Chart(ctxM, {
-                type: 'bar',
+                type: 'line', // Заменили 'bar' на 'line'
                 data: {
                     labels: sortedMonths.length > 0 ? sortedMonths : ['Нет данных'],
                     datasets: [{
                         label: 'Чистая прибыль (₽)',
                         data: marginData.length > 0 ? marginData : [0],
-                        backgroundColor: '#28a745',
-                        borderRadius: 4
+                        borderColor: '#007bff', // Красивая синяя линия
+                        backgroundColor: 'rgba(0, 123, 255, 0.15)', // Нежная полупрозрачная заливка внизу
+                        borderWidth: 3, // Толщина линии
+                        fill: true, // Включаем заливку под графиком
+                        tension: 0.4, // Делаем изгиб линии плавным
+                        pointRadius: 6, // Размер точек на графике
+                        pointBackgroundColor: '#ffffff', // Белая серединка у точек
+                        pointBorderColor: '#007bff', // Синий ободок у точек
+                        pointBorderWidth: 2
                     }]
                 },
                 options: {
                     responsive: true, maintainAspectRatio: false,
-                    plugins: { title: { display: true, text: 'Динамика прибыли по месяцам', font: { size: 16 } } }
+                    plugins: { title: { display: true, text: 'Динамика прибыли по месяцам', font: { size: 16 } } },
+                    scales: { 
+                        y: { beginAtZero: true }, // Заставляем график всегда начинаться с нуля
+                        x: { grid: { display: false } } // Убираем лишние вертикальные полосы
+                    }
                 }
             });
-
             // Отрисовка Кольцевой диаграммы (Расходы)
             if(chartExpInst) chartExpInst.destroy();
             const ctxE = document.getElementById('expensesChart').getContext('2d');
