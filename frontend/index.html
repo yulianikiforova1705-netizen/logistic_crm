@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Логистика CRM - Yulia Nikiforova</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; padding: 20px; background-color: #f4f7f6; font-size: 13px; margin: 0; }
         
@@ -21,12 +22,17 @@
         .header-flex { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #007bff; margin-bottom: 20px; padding-bottom: 10px; }
         .header-flex h1 { margin: 0; border: none; padding: 0; }
         
-        .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
         .dash-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); text-align: center; border: 1px solid #e1e4e8; border-top: 4px solid #007bff; }
         .dash-card:nth-child(2) { border-top-color: #28a745; } 
         .dash-card:nth-child(3) { border-top-color: #dc3545; } 
         .dash-card h4 { margin: 0 0 10px 0; color: #6c757d; font-size: 14px; text-transform: uppercase; }
         .dash-value { font-size: 26px; font-weight: bold; color: #333; }
+
+        /* НОВЫЙ БЛОК: ГРАФИКИ */
+        .charts-container { display: grid; grid-template-columns: 2fr 1fr; gap: 15px; margin-bottom: 25px; }
+        .chart-box { background: white; padding: 15px; border-radius: 8px; border: 1px solid #e1e4e8; box-shadow: 0 2px 10px rgba(0,0,0,0.05); height: 280px; position: relative; }
+        @media (max-width: 900px) { .charts-container { grid-template-columns: 1fr; } }
 
         .form-card { background: #eef2f5; padding: 15px; border-radius: 6px; margin-bottom: 20px; }
         .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 15px; }
@@ -100,6 +106,15 @@
                 <div class="dash-card"><h4>Требуют внимания</h4><div class="dash-value margin-negative" id="dash-problems">0</div></div>
             </div>
 
+            <div class="charts-container">
+                <div class="chart-box">
+                    <canvas id="marginChart"></canvas>
+                </div>
+                <div class="chart-box">
+                    <canvas id="expensesChart"></canvas>
+                </div>
+            </div>
+
             <div class="form-card">
                 <h3>Создать новый рейс</h3>
                 <form id="add-order-form">
@@ -151,7 +166,6 @@
     <div class="modal-overlay" id="notes-modal"><div class="modal-box" style="width: 400px;"><h3 style="border-bottom-color: #6f42c1; color: #6f42c1;">📖 Досье рейса</h3><div style="display: flex; gap: 10px; margin-bottom: 15px;"><input type="text" id="n_new_note" class="form-group" style="flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 6px; outline: none;" placeholder="Текст или нажмите микрофон..."><button id="micBtn" class="mic-btn" onclick="startVoiceRecognition()" title="Голосовой ввод">🎙️</button><button style="background: #007bff; color: white; border: none; padding: 0 15px; border-radius: 6px; cursor: pointer; font-weight: bold;" onclick="submitNote()">Отправить</button></div><div class="timeline" id="notes-timeline"></div><div class="modal-btn-group"><button class="btn-cancel" onclick="closeNotesModal()" style="width: 100%;">Закрыть</button></div></div></div>
 
     <script>
-        // АВТОРИЗАЦИЯ
         function checkAuth() { const token = localStorage.getItem('crm_token'); if (token) { document.getElementById('login-screen').style.display = 'none'; document.getElementById('app-content').style.display = 'block'; loadOrders(); } else { document.getElementById('login-screen').style.display = 'flex'; document.getElementById('app-content').style.display = 'none'; } }
         function attemptLogin() { const user = document.getElementById('login-username').value; const pass = document.getElementById('login-password').value; fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: user, password: pass }) }).then(res => res.json()).then(data => { if (data.status === 'success') { localStorage.setItem('crm_token', data.token); document.getElementById('login-error').style.display = 'none'; checkAuth(); } else { document.getElementById('login-error').style.display = 'block'; } }); }
         function logout() { localStorage.removeItem('crm_token'); checkAuth(); }
@@ -159,11 +173,78 @@
 
         let globalOrders = []; 
         let currentOrderId = null; 
-        
-        // НОВАЯ ПЕРЕМЕННАЯ ДЛЯ ГАЛОЧЕК
         let selectedIds = new Set();
+        
+        // ПЕРЕМЕННЫЕ ДЛЯ ГРАФИКОВ
+        let chartMarginInst = null;
+        let chartExpInst = null;
 
         function getColorClass(status) { if(status === 'Оплачено') return 'status-green'; if(status === 'Просрочка') return 'status-red'; return 'status-yellow'; }
+
+        // --- ЛОГИКА ОТРИСОВКИ ГРАФИКОВ ---
+        function updateCharts(data) {
+            // 1. Подготовка данных для кольцевой диаграммы (Расходы)
+            const expStats = {};
+            data.forEach(order => {
+                if(order.extraExpenses) {
+                    order.extraExpenses.forEach(exp => {
+                        expStats[exp.category] = (expStats[exp.category] || 0) + exp.amount;
+                    });
+                }
+            });
+            const expLabels = Object.keys(expStats);
+            const expData = Object.values(expStats);
+
+            // 2. Подготовка данных для гистограммы (Маржа по месяцам)
+            const marginByMonth = {};
+            data.forEach(order => {
+                // Берем только Год-Месяц (например, 2026-04)
+                const month = order.orderDate.substring(0, 7); 
+                const extra = order.extraExpenses ? order.extraExpenses.reduce((sum, e) => sum + e.amount, 0) : 0;
+                const margin = order.clientRate - order.contractorRate - extra;
+                marginByMonth[month] = (marginByMonth[month] || 0) + margin;
+            });
+            const sortedMonths = Object.keys(marginByMonth).sort();
+            const marginData = sortedMonths.map(m => marginByMonth[m]);
+
+            // Отрисовка Гистограммы (Маржа)
+            if(chartMarginInst) chartMarginInst.destroy();
+            const ctxM = document.getElementById('marginChart').getContext('2d');
+            chartMarginInst = new Chart(ctxM, {
+                type: 'bar',
+                data: {
+                    labels: sortedMonths.length > 0 ? sortedMonths : ['Нет данных'],
+                    datasets: [{
+                        label: 'Чистая прибыль (₽)',
+                        data: marginData.length > 0 ? marginData : [0],
+                        backgroundColor: '#28a745',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { title: { display: true, text: 'Динамика прибыли по месяцам', font: { size: 16 } } }
+                }
+            });
+
+            // Отрисовка Кольцевой диаграммы (Расходы)
+            if(chartExpInst) chartExpInst.destroy();
+            const ctxE = document.getElementById('expensesChart').getContext('2d');
+            chartExpInst = new Chart(ctxE, {
+                type: 'doughnut',
+                data: {
+                    labels: expLabels.length > 0 ? expLabels : ['Нет расходов'],
+                    datasets: [{
+                        data: expData.length > 0 ? expData : [1],
+                        backgroundColor: ['#dc3545', '#ffc107', '#fd7e14', '#6f42c1', '#0dcaf0', '#6c757d'],
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { title: { display: true, text: 'Утечки бюджета (Доп. расходы)', font: { size: 16 } } }
+                }
+            });
+        }
 
         function updateDashboard(data) {
             let totalOrders = data.length; let totalMargin = 0; let problemsCount = 0;
@@ -178,6 +259,8 @@
 
         function renderTable(dataToRender) {
             updateDashboard(dataToRender); 
+            updateCharts(dataToRender); // <--- ВЫЗЫВАЕМ ГРАФИКИ ПРИ КАЖДОМ ОБНОВЛЕНИИ ТАБЛИЦЫ
+            
             const tableBody = document.getElementById('orders-table-body');
             tableBody.innerHTML = ''; 
 
@@ -190,24 +273,15 @@
                 let expensesHtml = order.extraExpenses ? order.extraExpenses.map(e => `<span class="extra-box"><b>${e.category}:</b> ${e.amount}</span>`).join('') : '';
                 expensesHtml += `<button class="btn-small" onclick="openExpenseModal(${order.id})">+ Добавить расход</button>`;
 
-                // Проверяем, стояла ли галочка у этого рейса
                 const isChecked = selectedIds.has(order.id) ? 'checked' : '';
 
                 const row = `<tr>
-                    <td style="text-align: center; vertical-align: middle;">
-                        <input type="checkbox" class="row-checkbox" value="${order.id}" ${isChecked} onchange="toggleRow(${order.id}, this.checked)" style="cursor: pointer; width: 16px; height: 16px;">
-                    </td>
+                    <td style="text-align: center; vertical-align: middle;"><input type="checkbox" class="row-checkbox" value="${order.id}" ${isChecked} onchange="toggleRow(${order.id}, this.checked)" style="cursor: pointer; width: 16px; height: 16px;"></td>
                     <td>${order.orderDate}</td>
                     <td><strong>${order.clientName}</strong><br><em>${order.contractorName}</em></td>
                     <td>${order.route || ''}</td>
                     <td>${Number(order.clientRate).toLocaleString()} / ${Number(order.contractorRate).toLocaleString()}</td>
-                    <td>
-                        <select class="status-select ${colorClass}" onchange="updatePaymentStatus(${order.id}, this.value)">
-                            <option value="Ожидание" ${order.paymentStatus === 'Ожидание' ? 'selected' : ''}>Ожидание</option>
-                            <option value="Оплачено" ${order.paymentStatus === 'Оплачено' ? 'selected' : ''}>Оплачено</option>
-                            <option value="Просрочка" ${order.paymentStatus === 'Просрочка' ? 'selected' : ''}>Просрочка</option>
-                        </select>
-                    </td>
+                    <td><select class="status-select ${colorClass}" onchange="updatePaymentStatus(${order.id}, this.value)"><option value="Ожидание" ${order.paymentStatus === 'Ожидание' ? 'selected' : ''}>Ожидание</option><option value="Оплачено" ${order.paymentStatus === 'Оплачено' ? 'selected' : ''}>Оплачено</option><option value="Просрочка" ${order.paymentStatus === 'Просрочка' ? 'selected' : ''}>Просрочка</option></select></td>
                     <td>${expensesHtml}</td>
                     <td class="${marginClass}">${finalMargin.toLocaleString()} ₽</td>
                     <td>
@@ -221,69 +295,11 @@
             });
         }
 
-        // --- ЛОГИКА МАССОВЫХ ДЕЙСТВИЙ (ГАЛОЧКИ) ---
-        function toggleAll(checked) {
-            document.querySelectorAll('.row-checkbox').forEach(cb => {
-                cb.checked = checked;
-                if (checked) selectedIds.add(Number(cb.value));
-                else selectedIds.delete(Number(cb.value));
-            });
-            updateBulkBar();
-        }
-
-        function toggleRow(id, checked) {
-            if (checked) selectedIds.add(id);
-            else selectedIds.delete(id);
-            updateBulkBar();
-            
-            // Если выбрали все руками — ставим галочку "Выбрать все"
-            const allChecked = selectedIds.size > 0 && selectedIds.size === globalOrders.length;
-            document.getElementById('selectAll').checked = allChecked;
-        }
-
-        function updateBulkBar() {
-            const bar = document.getElementById('bulk-bar');
-            const countSpan = document.getElementById('bulk-count');
-            if (selectedIds.size > 0) {
-                bar.style.display = 'flex';
-                countSpan.innerText = `Выбрано заявок: ${selectedIds.size}`;
-            } else {
-                bar.style.display = 'none';
-            }
-        }
-
-        function bulkDelete() {
-            if (!confirm(`Вы уверены, что хотите безвозвратно удалить ${selectedIds.size} рейсов?`)) return;
-            
-            // Хитрость: отправляем много запросов на удаление одновременно
-            const deletePromises = Array.from(selectedIds).map(id => 
-                fetch(`/api/orders/${id}`, { method: 'DELETE' })
-            );
-            
-            Promise.all(deletePromises).then(() => {
-                selectedIds.clear(); // очищаем память
-                updateBulkBar(); // прячем панель
-                document.getElementById('selectAll').checked = false; // снимаем галочку в шапке
-                loadOrders(); // обновляем таблицу
-            });
-        }
-
-        // --- ЛОГИКА ЭКСПОРТА БАЗЫ В JSON ---
-        function exportToJson() {
-            // Превращаем массив в красивый текст
-            const dataStr = JSON.stringify(globalOrders, null, 2);
-            const blob = new Blob([dataStr], { type: "application/json" });
-            const url = URL.createObjectURL(blob);
-            
-            const a = document.createElement('a');
-            a.href = url;
-            const dateStr = new Date().toLocaleDateString('ru-RU').replace(/\./g, '-');
-            a.download = `Logistic_Backup_${dateStr}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-        }
-
-        // --- СТАНДАРТНЫЙ КОД CRM ---
+        function toggleAll(checked) { document.querySelectorAll('.row-checkbox').forEach(cb => { cb.checked = checked; if (checked) selectedIds.add(Number(cb.value)); else selectedIds.delete(Number(cb.value)); }); updateBulkBar(); }
+        function toggleRow(id, checked) { if (checked) selectedIds.add(id); else selectedIds.delete(id); updateBulkBar(); const allChecked = selectedIds.size > 0 && selectedIds.size === globalOrders.length; document.getElementById('selectAll').checked = allChecked; }
+        function updateBulkBar() { const bar = document.getElementById('bulk-bar'); const countSpan = document.getElementById('bulk-count'); if (selectedIds.size > 0) { bar.style.display = 'flex'; countSpan.innerText = `Выбрано заявок: ${selectedIds.size}`; } else { bar.style.display = 'none'; } }
+        function bulkDelete() { if (!confirm(`Вы уверены, что хотите безвозвратно удалить ${selectedIds.size} рейсов?`)) return; const deletePromises = Array.from(selectedIds).map(id => fetch(`/api/orders/${id}`, { method: 'DELETE' })); Promise.all(deletePromises).then(() => { selectedIds.clear(); updateBulkBar(); document.getElementById('selectAll').checked = false; loadOrders(); }); }
+        function exportToJson() { const dataStr = JSON.stringify(globalOrders, null, 2); const blob = new Blob([dataStr], { type: "application/json" }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; const dateStr = new Date().toLocaleDateString('ru-RU').replace(/\./g, '-'); a.download = `Logistic_Backup_${dateStr}.json`; a.click(); URL.revokeObjectURL(url); }
         function filterOrders() { const query = document.getElementById('search-input').value.toLowerCase(); const filteredData = globalOrders.filter(order => order.clientName.toLowerCase().includes(query) || order.contractorName.toLowerCase().includes(query) || (order.route && order.route.toLowerCase().includes(query))); renderTable(filteredData); }
         function loadOrders() { fetch('/api/orders').then(res => res.json()).then(data => { globalOrders = data.data; filterOrders(); }); }
 
@@ -299,13 +315,11 @@
         function submitEdit() { const updatedData = { orderDate: document.getElementById('e-date').value, clientName: document.getElementById('e-client').value, contractorName: document.getElementById('e-contractor').value, route: document.getElementById('e-route').value, clientRate: document.getElementById('e-client-rate').value, contractorRate: document.getElementById('e-contractor-rate').value }; fetch(`/api/orders/${currentOrderId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updatedData) }).then(() => { closeEditModal(); loadOrders(); }); }
         function exportToExcel() { const excelData = globalOrders.map(order => { const totalExtra = order.extraExpenses ? order.extraExpenses.reduce((sum, exp) => sum + exp.amount, 0) : 0; const finalMargin = order.clientRate - order.contractorRate - totalExtra; const expensesText = order.extraExpenses && order.extraExpenses.length > 0 ? order.extraExpenses.map(e => `${e.category}: ${e.amount} руб.`).join(' | ') : "Нет расходов"; return { "Дата заявки": order.orderDate, "Клиент": order.clientName, "Подрядчик": order.contractorName, "Маршрут": order.route || "Не указан", "Ставка клиента (руб)": Number(order.clientRate), "Ставка подрядчика (руб)": Number(order.contractorRate), "Статус оплаты": order.paymentStatus, "Доп. расходы": expensesText, "Чистая Прибыль (руб)": finalMargin }; }); const worksheet = XLSX.utils.json_to_sheet(excelData); const workbook = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(workbook, worksheet, "Отчет по рейсам"); const dateStr = new Date().toLocaleDateString('ru-RU').replace(/\./g, '-'); XLSX.writeFile(workbook, `Логистика_Отчет_${dateStr}.xlsx`); }
 
-        // ДОКУМЕНТЫ
         function openDocsModal(orderId) { currentOrderId = orderId; document.getElementById('docs-modal').style.display = 'flex'; }
         function closeDocsModal() { document.getElementById('docs-modal').style.display = 'none'; }
         function generateInvoice() { const order = globalOrders.find(o => o.id === currentOrderId); if(!order) return; const invNumber = order.id + 1000; const dateStr = new Date().toLocaleDateString('ru-RU'); const html = `<html><head><meta charset="UTF-8"><title>Счет №${invNumber}</title><style>body{font-family:'Arial',sans-serif; padding:40px; color:#000; line-height:1.6; font-size:14px; max-width:800px; margin:auto;} .header{font-size:22px; font-weight:bold; margin-bottom:20px; border-bottom:2px solid #000; padding-bottom:10px;} table{width:100%; border-collapse:collapse; margin-top:20px;} th,td{border:1px solid #000; padding:12px; text-align:left;} th{background:#f4f4f4;} .sum{text-align:right; font-size:18px; font-weight:bold; margin-top:20px;} .sign{margin-top:60px;}</style></head><body><div class="header">СЧЕТ НА ОПЛАТУ № ${invNumber} от ${dateStr}</div><p><b>Исполнитель:</b> Наша Транспортная Компания</p><p><b>Заказчик:</b> ${order.clientName}</p><p><b>Основание:</b> Перевозка груза от ${order.orderDate.split('-').reverse().join('.')}</p><table><tr><th>№</th><th>Наименование услуги</th><th>Маршрут</th><th>Сумма (руб)</th></tr><tr><td>1</td><td>Транспортно-экспедиционные услуги</td><td>${order.route}</td><td>${Number(order.clientRate).toLocaleString()}</td></tr></table><div class="sum">Итого к оплате: ${Number(order.clientRate).toLocaleString()} руб. (Без НДС)</div><div class="sign"><p>Руководитель _________________ / Подпись /</p></div><script>window.print();<\/script></body></html>`; const blob = new Blob([html], { type: 'text/html;charset=utf-8' }); window.open(URL.createObjectURL(blob), '_blank'); closeDocsModal(); }
         function generateContractorOrder() { const order = globalOrders.find(o => o.id === currentOrderId); if(!order) return; const reqNumber = order.id + 500; const html = `<html><head><meta charset="UTF-8"><title>Заявка №${reqNumber}</title><style>body{font-family:'Arial',sans-serif; padding:40px; color:#000; line-height:1.6; font-size:14px; max-width:800px; margin:auto;} .header{font-size:20px; font-weight:bold; margin-bottom:20px; text-align:center; text-transform:uppercase;} table{width:100%; border-collapse:collapse; margin-top:10px;} th,td{border:1px solid #000; padding:10px; text-align:left;} th{background:#f4f4f4; width:30%;} .sign{display:flex; justify-content:space-between; margin-top:50px;}</style></head><body><div class="header">Договор-заявка на перевозку груза № ${reqNumber}</div><table><tr><th>Дата заявки</th><td>${order.orderDate.split('-').reverse().join('.')}</td></tr><tr><th>Заказчик (Экспедитор)</th><td>Наша Транспортная Компания</td></tr><tr><th>Перевозчик (Подрядчик)</th><td>${order.contractorName}</td></tr><tr><th>Маршрут движения</th><td>${order.route}</td></tr><tr><th>Ставка за рейс</th><td><b>${Number(order.contractorRate).toLocaleString()} руб.</b></td></tr></table><div class="sign"><div><b>От Заказчика:</b><br><br>_________________ / М.П. /</div><div><b>От Перевозчика:</b><br><br>_________________ / М.П. /</div></div><script>window.print();<\/script></body></html>`; const blob = new Blob([html], { type: 'text/html;charset=utf-8' }); window.open(URL.createObjectURL(blob), '_blank'); closeDocsModal(); }
 
-        // ДОСЬЕ И ГОЛОСОВОЙ ВВОД
         let voiceRec = null;
         function openNotesModal(orderId) { currentOrderId = orderId; const order = globalOrders.find(o => o.id === orderId); const tl = document.getElementById('notes-timeline'); tl.innerHTML = ''; if(order.history && order.history.length > 0) { [...order.history].reverse().forEach(h => { const d = new Date(h.date); const formattedDate = `${d.toLocaleDateString('ru-RU')} в ${d.toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'})}`; tl.innerHTML += `<div class="tl-item"><div class="tl-dot"></div><div class="tl-date">${formattedDate}</div><div class="tl-text">${h.text}</div></div>`; }); } else { tl.innerHTML = '<div style="color: #666; font-size: 12px;">История пуста. Добавьте первую запись.</div>'; } document.getElementById('n_new_note').value = ''; document.getElementById('notes-modal').style.display = 'flex'; }
         function closeNotesModal() { document.getElementById('notes-modal').style.display = 'none'; if(voiceRec) voiceRec.stop(); }
