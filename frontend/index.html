@@ -102,9 +102,10 @@
                 <form id="add-order-form">
                     <div class="form-grid">
                         <div class="form-group"><label>Дата заявки</label><input type="date" id="f-date" required></div>
-                        <div class="form-group"><label>Клиент</label><input type="text" id="f-client" required></div>
-                        <div class="form-group"><label>Подрядчик</label><input type="text" id="f-contractor" required></div>
-                        <div class="form-group"><label>Маршрут</label><input type="text" id="f-route" required></div>
+                        <div class="form-group"><label>Клиент</label><input type="text" id="f-client" list="clients-list" autocomplete="off" required></div>
+                        <div class="form-group"><label>Подрядчик</label><input type="text" id="f-contractor" list="contractors-list" autocomplete="off" required></div>
+                        <div class="form-group"><label>Маршрут</label><input type="text" id="f-route" list="routes-list" autocomplete="off" required></div>
+                        
                         <div class="form-group"><label>Ставка клиента</label><input type="number" id="f-client-rate" required></div>
                         <div class="form-group"><label>Ставка подрядчика</label><input type="number" id="f-contractor-rate" required></div>
                     </div>
@@ -142,8 +143,27 @@
         </div>
     </div>
 
+    <datalist id="clients-list"></datalist>
+    <datalist id="contractors-list"></datalist>
+    <datalist id="routes-list"></datalist>
+
     <div class="modal-overlay" id="expense-modal"><div class="modal-box"><h3>Добавить расход</h3><div class="form-group" style="margin-bottom: 10px;"><label>Категория</label><select id="modal-category"><option value="Штраф">Штраф</option><option value="Простой">Простой</option><option value="Перегруз">Перегруз</option><option value="Опоздание">Опоздание</option><option value="Страховка">Страховка</option><option value="Прочее">Прочее</option></select></div><div class="form-group"><label>Сумма (руб)</label><input type="number" id="modal-amount"></div><div class="modal-btn-group"><button class="btn-cancel" onclick="closeExpenseModal()">Отмена</button><button onclick="submitExpense()">Сохранить</button></div></div></div>
-    <div class="modal-overlay" id="edit-modal"><div class="modal-box" style="width: 450px;"><h3>✏️ Редактировать рейс</h3><div class="form-grid" style="grid-template-columns: 1fr 1fr;"><div class="form-group"><label>Дата заявки</label><input type="date" id="e-date"></div><div class="form-group"><label>Маршрут</label><input type="text" id="e-route"></div><div class="form-group"><label>Клиент</label><input type="text" id="e-client"></div><div class="form-group"><label>Подрядчик</label><input type="text" id="e-contractor"></div><div class="form-group"><label>Ставка клиента</label><input type="number" id="e-client-rate"></div><div class="form-group"><label>Ставка подрядчика</label><input type="number" id="e-contractor-rate"></div></div><div class="modal-btn-group"><button class="btn-cancel" onclick="closeEditModal()">Отмена</button><button class="btn-blue" onclick="submitEdit()">Сохранить</button></div></div></div>
+    
+    <div class="modal-overlay" id="edit-modal">
+        <div class="modal-box" style="width: 450px;">
+            <h3>✏️ Редактировать рейс</h3>
+            <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
+                <div class="form-group"><label>Дата заявки</label><input type="date" id="e-date"></div>
+                <div class="form-group"><label>Маршрут</label><input type="text" id="e-route" list="routes-list" autocomplete="off"></div>
+                <div class="form-group"><label>Клиент</label><input type="text" id="e-client" list="clients-list" autocomplete="off"></div>
+                <div class="form-group"><label>Подрядчик</label><input type="text" id="e-contractor" list="contractors-list" autocomplete="off"></div>
+                <div class="form-group"><label>Ставка клиента</label><input type="number" id="e-client-rate"></div>
+                <div class="form-group"><label>Ставка подрядчика</label><input type="number" id="e-contractor-rate"></div>
+            </div>
+            <div class="modal-btn-group"><button class="btn-cancel" onclick="closeEditModal()">Отмена</button><button class="btn-blue" onclick="submitEdit()">Сохранить</button></div>
+        </div>
+    </div>
+    
     <div class="modal-overlay" id="docs-modal"><div class="modal-box" style="width: 320px;"><h3 style="border-bottom-color: #fd7e14;">📄 Печать документов</h3><div style="display: flex; flex-direction: column; gap: 10px;"><button class="btn-blue" onclick="generateInvoice()" style="width: 100%; padding: 12px;">🧾 Счет Клиенту</button><button class="btn-orange" onclick="generateContractorOrder()" style="width: 100%; padding: 12px; color: white;">🚚 Заявка Перевозчику</button></div><div class="modal-btn-group" style="margin-top: 15px;"><button class="btn-cancel" onclick="closeDocsModal()" style="width: 100%;">Отмена</button></div></div></div>
     
     <div class="modal-overlay" id="notes-modal">
@@ -169,6 +189,23 @@
 
         let globalOrders = []; let currentOrderId = null; let selectedIds = new Set();
         let chartMarginInst = null; let chartExpInst = null;
+
+        // НОВАЯ ФУНКЦИЯ: Обновление справочников
+        function updateDatalists(data) {
+            const clients = new Set();
+            const contractors = new Set();
+            const routes = new Set();
+
+            data.forEach(order => {
+                if(order.clientName) clients.add(order.clientName);
+                if(order.contractorName) contractors.add(order.contractorName);
+                if(order.route) routes.add(order.route);
+            });
+
+            document.getElementById('clients-list').innerHTML = Array.from(clients).map(c => `<option value="${c}">`).join('');
+            document.getElementById('contractors-list').innerHTML = Array.from(contractors).map(c => `<option value="${c}">`).join('');
+            document.getElementById('routes-list').innerHTML = Array.from(routes).map(r => `<option value="${r}">`).join('');
+        }
 
         function getColorClass(status) { if(status === 'Оплачено') return 'status-green'; if(status === 'Просрочка') return 'status-red'; return 'status-yellow'; }
 
@@ -217,7 +254,6 @@
             updateDashboard(dataToRender); updateCharts(dataToRender); 
             const tableBody = document.getElementById('orders-table-body'); tableBody.innerHTML = ''; 
             
-            // Цвета для статуса рейса
             const tripColors = {
                 'На погрузке': 'background-color: #e2e3e5; color: #383d41;',
                 'В пути': 'background-color: #cce5ff; color: #004085;',
@@ -229,7 +265,6 @@
                 const totalExtra = order.extraExpenses ? order.extraExpenses.reduce((sum, exp) => sum + exp.amount, 0) : 0; const finalMargin = order.clientRate - order.contractorRate - totalExtra; const marginClass = finalMargin < 0 ? 'margin-negative' : 'margin-val'; const colorClass = getColorClass(order.paymentStatus);
                 let expensesHtml = order.extraExpenses ? order.extraExpenses.map(e => `<span class="extra-box"><b>${e.category}:</b> ${e.amount}</span>`).join('') : ''; expensesHtml += `<button class="btn-small" onclick="openExpenseModal(${order.id})">+ Добавить расход</button>`;
                 const isChecked = selectedIds.has(order.id) ? 'checked' : '';
-                
                 const tColor = tripColors[order.tripStatus] || tripColors['На погрузке'];
 
                 const row = `<tr>
@@ -270,13 +305,20 @@
         function bulkDelete() { if (!confirm(`Вы уверены, что хотите безвозвратно удалить ${selectedIds.size} рейсов?`)) return; const deletePromises = Array.from(selectedIds).map(id => fetch(`/api/orders/${id}`, { method: 'DELETE' })); Promise.all(deletePromises).then(() => { selectedIds.clear(); updateBulkBar(); document.getElementById('selectAll').checked = false; loadOrders(); }); }
         function exportToJson() { const dataStr = JSON.stringify(globalOrders, null, 2); const blob = new Blob([dataStr], { type: "application/json" }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; const dateStr = new Date().toLocaleDateString('ru-RU').replace(/\./g, '-'); a.download = `Logistic_Backup_${dateStr}.json`; a.click(); URL.revokeObjectURL(url); }
         function filterOrders() { const query = document.getElementById('search-input').value.toLowerCase(); const filteredData = globalOrders.filter(order => order.clientName.toLowerCase().includes(query) || order.contractorName.toLowerCase().includes(query) || (order.route && order.route.toLowerCase().includes(query))); renderTable(filteredData); }
-        function loadOrders() { fetch('/api/orders').then(res => res.json()).then(data => { globalOrders = data.data; filterOrders(); }); }
+        
+        function loadOrders() { 
+            fetch('/api/orders')
+            .then(res => res.json())
+            .then(data => { 
+                globalOrders = data.data; 
+                filterOrders(); 
+                updateDatalists(globalOrders); // Вызываем обновление справочников после загрузки
+            }); 
+        }
 
         document.getElementById('add-order-form').addEventListener('submit', function(e) { e.preventDefault(); const newOrderData = { orderDate: document.getElementById('f-date').value, clientName: document.getElementById('f-client').value, contractorName: document.getElementById('f-contractor').value, route: document.getElementById('f-route').value, clientRate: document.getElementById('f-client-rate').value, contractorRate: document.getElementById('f-contractor-rate').value }; fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newOrderData) }).then(() => { document.getElementById('add-order-form').reset(); loadOrders(); }); });
 
         function updatePaymentStatus(orderId, newStatus) { fetch(`/api/orders/${orderId}/status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus }) }).then(() => loadOrders()); }
-        
-        // НОВАЯ ФУНКЦИЯ: Обновление статуса поездки
         function updateTripStatus(orderId, newStatus) { fetch(`/api/orders/${orderId}/trip_status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus }) }).then(() => loadOrders()); }
         
         function openExpenseModal(orderId) { currentOrderId = orderId; document.getElementById('modal-amount').value = ''; document.getElementById('expense-modal').style.display = 'flex'; }
