@@ -2,112 +2,201 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Логистика CRM - Yulia Nikiforova</title>
+    <title>V-SYSTEM | Trackflow Logistics</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800&family=Orbitron:wght@900&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; padding: 20px; background-color: #f4f7f6; font-size: 13px; margin: 0; }
-        #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #2c3e50; display: flex; align-items: center; justify-content: center; z-index: 9999; }
-        .login-box { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); width: 300px; text-align: center; }
-        .login-box h2 { margin-top: 0; color: #333; margin-bottom: 20px; }
-        .login-input { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
-        .btn-login { width: 100%; background: #007bff; color: white; border: none; padding: 12px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 14px; }
-        .btn-login:hover { background: #0056b3; }
-        #login-error { color: #dc3545; font-size: 12px; margin-bottom: 10px; display: none; }
-        #app-content { display: none; }
-        .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 1400px; margin: auto; }
-        .header-flex { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #007bff; margin-bottom: 20px; padding-bottom: 10px; }
-        .header-flex h1 { margin: 0; border: none; padding: 0; }
-        .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
-        .dash-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); text-align: center; border: 1px solid #e1e4e8; border-top: 4px solid #007bff; }
-        .dash-card:nth-child(2) { border-top-color: #28a745; } 
-        .dash-card:nth-child(3) { border-top-color: #dc3545; } 
-        .dash-card h4 { margin: 0 0 10px 0; color: #6c757d; font-size: 14px; text-transform: uppercase; }
-        .dash-value { font-size: 26px; font-weight: bold; color: #333; }
-        .charts-container { display: grid; grid-template-columns: 2fr 1fr; gap: 15px; margin-bottom: 25px; }
-        .chart-box { background: white; padding: 15px; border-radius: 8px; border: 1px solid #e1e4e8; box-shadow: 0 2px 10px rgba(0,0,0,0.05); height: 280px; position: relative; }
-        @media (max-width: 900px) { .charts-container { grid-template-columns: 1fr; } }
-        .form-card { background: #eef2f5; padding: 15px; border-radius: 6px; margin-bottom: 20px; }
-        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 15px; }
-        .form-group { display: flex; flex-direction: column; }
-        .form-group label { font-weight: bold; margin-bottom: 4px; font-size: 11px; color: #444; }
-        .form-group input, .form-group select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
-        button { background-color: #28a745; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        /* 🎨 Премиальная палитра (Apple Style) */
+        :root {
+            --primary: #0A84FF; 
+            --accent: #FF9500;  
+            --success: #32D74B; 
+            --bg: #F2F2F7;      
+            --card-bg: rgba(255, 255, 255, 0.7); 
+            --text-main: #000000;
+            --text-muted: #6c757d;
+            --border: rgba(60, 60, 67, 0.1); 
+        }
+
+        /* 🌙 Темная тема (Premium OLED Dark) */
+        body.dark-theme {
+            --bg: #000000; 
+            --card-bg: rgba(28, 28, 30, 0.65); 
+            --text-main: #FFFFFF;
+            --text-muted: #a1a1a6;
+            --primary: #0A84FF; 
+            --accent: #FF453A;  
+            --success: #30D158; 
+            --border: rgba(255, 255, 255, 0.15);
+        }
+
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif; 
+            -webkit-font-smoothing: antialiased; 
+            background: var(--bg); 
+            color: var(--text-main); 
+            padding: 20px; 
+            margin: 0; 
+            font-size: 13px;
+            transition: background 0.4s ease, color 0.4s ease;
+        }
+
+        /* =========================================
+           🏢 ШАПКА ПРИЛОЖЕНИЯ (БРЕНДИНГ V-SYSTEM)
+           ========================================= */
+        .app-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid var(--border); padding-bottom: 15px;}
+        .brand-title { margin: 0; font-family: 'Montserrat', sans-serif; font-size: 2.8em; color: var(--primary); font-weight: 800; letter-spacing: -1px; text-transform: uppercase; line-height: 1.1; }
+        .trackflow-title { margin: 0; font-family: 'Orbitron', sans-serif; font-size: 20px; font-weight: 900; text-transform: uppercase; letter-spacing: 3px; background: linear-gradient(90deg, #0D9488 0%, #0D9488 18%, #3B82F6 35%, #8B5CF6 50%, #3B82F6 65%, #0D9488 82%, #0D9488 100%); background-size: 200% auto; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: v-text-flow 6s linear infinite; filter: drop-shadow(0 0 10px rgba(13, 148, 136, 0.5)); }
+        @keyframes v-text-flow { 0% { background-position: 0% center; } 100% { background-position: 200% center; } }
         
-        /* НОВЫЕ СТИЛИ ДЛЯ ПАНЕЛИ ФИЛЬТРОВ */
-        .filter-panel { display: flex; gap: 10px; margin-bottom: 15px; background: #eef2f5; padding: 10px; border-radius: 6px; align-items: center; }
-        .filter-panel span { font-weight: bold; font-size: 14px; color: #555; margin-right: 10px; }
-        .btn-filter { background-color: #fff; color: #333; border: 1px solid #ccc; padding: 8px 15px; font-weight: normal; transition: 0.2s; }
-        .btn-filter:hover { background-color: #e2e6ea; }
-        .btn-filter.active { background-color: #007bff; color: white; border-color: #007bff; font-weight: bold; box-shadow: 0 2px 5px rgba(0,123,255,0.3); }
+        .header-controls { display: flex; gap: 10px; align-items: center; }
+        .theme-toggle { background: var(--card-bg); border: 1px solid var(--border); border-radius: 50%; width: 44px; height: 44px; font-size: 1.2em; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; box-shadow: 0 2px 5px rgba(0,0,0,0.05); color: var(--text-main); }
+        .theme-toggle:active { transform: scale(0.9); }
+
+        /* 🔐 Экран авторизации (Apple Style + V-System) */
+        .login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); display: flex; align-items: center; justify-content: center; z-index: 9999; transition: opacity 0.3s ease; }
+        .login-card { background: var(--card-bg); padding: 40px; border-radius: 24px; text-align: center; border: 1px solid var(--border); box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3); width: 90%; max-width: 400px; backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); color: var(--text-main); }
+        .login-card .brand-title { font-size: 2.2em; margin-bottom: 5px; }
+        .login-card .trackflow-title { font-size: 14px; margin-bottom: 25px; }
+        #login-error { color: #FF453A; font-size: 12px; margin-bottom: 10px; display: none; font-weight: bold; }
+
+        #app-content { display: none; }
+        .container { max-width: 1400px; margin: auto; }
+        
+        /* 📱 Карточки (Эффект матового стекла) */
+        .glass-card { background: var(--card-bg); border-radius: 20px; border: 1px solid var(--border); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s ease; }
+        body.dark-theme .glass-card { box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4); }
+
+        .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .dash-card { padding: 20px; text-align: center; border-top: 4px solid var(--primary); }
+        .dash-card:nth-child(2) { border-top-color: var(--success); } 
+        .dash-card:nth-child(3) { border-top-color: var(--accent); } 
+        .dash-card h4 { margin: 0 0 10px 0; color: var(--text-muted); font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;}
+        .dash-value { font-size: 26px; font-weight: bold; color: var(--text-main); }
+        .margin-val { color: var(--success); }
+        .margin-negative { color: var(--accent); }
+
+        .charts-container { display: grid; grid-template-columns: 2fr 1fr; gap: 15px; margin-bottom: 25px; }
+        .chart-box { padding: 15px; height: 280px; position: relative; }
+        @media (max-width: 900px) { .charts-container { grid-template-columns: 1fr; } }
+
+        .form-card { padding: 20px; margin-bottom: 20px; }
+        .form-card h3 { margin-top: 0; margin-bottom: 15px; font-size: 1.2em; color: var(--primary); }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 15px; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group label { font-weight: 600; margin-bottom: 4px; font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        /* Поля ввода (iOS Style) */
+        input, select { width: 100%; padding: 14px 16px; border: 1px solid var(--border); border-radius: 14px; box-sizing: border-box; font-family: inherit; font-size: 13px; transition: all 0.3s ease; background: var(--card-bg); color: var(--text-main); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); outline: none; }
+        input:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.2); }
+        select option { background: var(--bg); color: var(--text-main); }
+
+        /* 🎛 Кнопки (Apple Bouncy) */
+        button { font-family: inherit; border: none; padding: 14px 20px; border-radius: 14px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1); background: rgba(10, 132, 255, 0.1); color: var(--primary); }
+        button:hover { background: var(--primary); color: #FFFFFF; }
+        button:active { transform: scale(0.95); opacity: 0.8; }
+        
+        /* Цветные кнопки (текст белый при заливке, как в ТЗ) */
+        .btn-solid-primary { background: var(--primary); color: #FFFFFF; }
+        .btn-cancel { background: rgba(255, 69, 58, 0.15); color: var(--accent); }
+        .btn-cancel:hover { background: var(--accent); color: white; }
+        .btn-blue { background: rgba(10, 132, 255, 0.15); color: var(--primary); }
+        .btn-orange { background: rgba(255, 149, 0, 0.15); color: var(--accent); }
+        .btn-purple { background: rgba(175, 82, 222, 0.15); color: #AF52DE; }
+        .btn-purple:hover { background: #AF52DE; color: white; }
+        .btn-success { background: rgba(50, 215, 75, 0.15); color: var(--success); }
+        .btn-success:hover { background: var(--success); color: white; }
+        .btn-small { padding: 8px 10px; font-size: 11px; margin-top: 5px; width: 100%; border-radius: 10px; }
+
+        /* 📑 Вкладки / Фильтры */
+        .filter-panel { display: flex; gap: 8px; margin-bottom: 15px; padding: 12px; align-items: center; }
+        .filter-panel span { font-weight: 600; font-size: 13px; color: var(--text-muted); margin-right: 10px; }
+        .btn-filter { background: rgba(118, 118, 128, 0.12); color: var(--text-main); padding: 10px 16px; border-radius: 20px; font-weight: 600; border: none;}
+        .btn-filter:hover { background: rgba(118, 118, 128, 0.2); color: var(--text-main); }
+        .btn-filter.active { background: var(--primary); color: #FFFFFF; box-shadow: 0 4px 12px rgba(10, 132, 255, 0.3); }
 
         .toolbar { display: flex; gap: 15px; margin-bottom: 15px; align-items: center; }
-        .search-box { flex-grow: 1; padding: 12px; font-size: 14px; border: 2px solid #007bff; border-radius: 6px; outline: none; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; vertical-align: top; }
-        th { background-color: #007bff; color: white; position: sticky; top: 0; }
-        select.status-select { border: none; padding: 4px 8px; border-radius: 4px; font-weight: bold; cursor: pointer; outline: none; font-size: 11px; }
-        .status-yellow { background-color: #fff3cd; color: #856404; }
-        .status-green { background-color: #d4edda; color: #155724; }
-        .status-red { background-color: #f8d7da; color: #721c24; }
-        .extra-box { font-size: 11px; color: #666; background: #eee; padding: 4px 6px; border-radius: 3px; display: block; margin-bottom: 4px; }
-        .btn-small { background-color: #6c757d; padding: 6px 8px; font-size: 11px; margin-top: 5px; width: 100%; border-radius: 4px;}
-        .btn-blue { background-color: #007bff; }
-        .btn-orange { background-color: #fd7e14; }
-        .btn-cancel { background-color: #dc3545; }
-        .btn-purple { background-color: #6f42c1; color: white; }
-        .btn-excel { background-color: #198754; font-size: 14px; padding: 12px 20px; }
-        .btn-cyan { background-color: #0dcaf0; color: #000; font-size: 14px; padding: 12px 20px; }
-        .margin-val { font-weight: bold; color: #28a745; font-size: 13px; }
-        .margin-negative { color: #dc3545; font-weight: bold; font-size: 13px; }
-        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 1000; }
-        .modal-box { background: white; padding: 25px; border-radius: 8px; width: 350px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
-        .modal-box h3 { margin-top: 0; border-bottom: 2px solid #007bff; padding-bottom: 10px; margin-bottom: 15px; }
-        .modal-btn-group { display: flex; justify-content: space-between; margin-top: 20px; }
-        .timeline { margin-top: 15px; padding-left: 15px; border-left: 2px solid #e1e4e8; max-height: 250px; overflow-y: auto; }
-        .tl-item { position: relative; margin-bottom: 15px; font-size: 12px; }
-        .tl-dot { position: absolute; left: -20px; top: 4px; width: 8px; height: 8px; border-radius: 50%; background: #6f42c1; box-shadow: 0 0 0 3px white; }
-        .tl-date { font-size: 10px; color: #6c757d; font-weight: bold; margin-bottom: 4px; }
-        .tl-text { background: #f8f9fa; padding: 10px; border-radius: 6px; border: 1px solid #e1e4e8; color: #333; }
-        .mic-btn { background: #e0f8e9; border: 1px solid #28a745; color: #28a745; width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.3s; font-size: 18px; }
-        .mic-btn.recording { background: #dc3545; border-color: #dc3545; color: white; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); box-shadow: 0 0 10px rgba(220,53,69,0.5); } 100% { transform: scale(1); } }
-        .tl-image-preview { max-width: 100%; max-height: 120px; border-radius: 6px; border: 1px solid #ccc; margin-top: 6px; cursor: pointer; transition: 0.2s; }
-        .tl-image-preview:hover { filter: brightness(0.9); }
-        .info-cell { margin-bottom: 4px; padding-bottom: 4px; border-bottom: 1px dashed #ddd; }
+        .search-box { flex-grow: 1; border-radius: 20px; padding: 12px 16px; margin-bottom: 0;}
+
+        /* Таблица */
+        .table-container { overflow-x: auto; border-radius: 20px; border: 1px solid var(--border); background: var(--card-bg); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th, td { border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); padding: 15px 12px; text-align: left; vertical-align: top; color: var(--text-main); }
+        th { background: rgba(118, 118, 128, 0.08); color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; border-top: none; }
+        tr:last-child td { border-bottom: none; }
+        td:last-child, th:last-child { border-right: none; }
+        
+        select.status-select { padding: 6px 10px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 11px; margin-bottom: 5px; border: none !important; }
+        .status-yellow { background: rgba(255, 149, 0, 0.15); color: var(--accent); }
+        .status-green { background: rgba(50, 215, 75, 0.15); color: var(--success); }
+        .status-red { background: rgba(255, 69, 58, 0.15); color: #FF453A; }
+        
+        .extra-box { font-size: 11px; color: var(--text-main); background: rgba(118, 118, 128, 0.12); padding: 6px 10px; border-radius: 10px; display: block; margin-bottom: 4px; border: 1px solid var(--border); font-weight: 500;}
+        .info-cell { margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px dashed var(--border); }
         .info-cell:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+
+        /* Модалки */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-box { background: var(--card-bg); padding: 30px; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); border: 1px solid var(--border); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); color: var(--text-main); }
+        .modal-box h3 { margin-top: 0; border-bottom: 1px solid var(--border); padding-bottom: 15px; margin-bottom: 20px; font-weight: 700; color: var(--primary);}
+        .modal-btn-group { display: flex; justify-content: space-between; margin-top: 25px; gap: 15px; }
+        .modal-btn-group button { flex: 1; }
+
+        .timeline { margin-top: 20px; padding-left: 20px; border-left: 2px solid var(--border); max-height: 250px; overflow-y: auto; }
+        .tl-item { position: relative; margin-bottom: 20px; font-size: 12px; }
+        .tl-dot { position: absolute; left: -27px; top: 4px; width: 12px; height: 12px; border-radius: 50%; background: #AF52DE; border: 2px solid var(--card-bg); }
+        .tl-date { font-size: 10px; color: var(--text-muted); font-weight: bold; margin-bottom: 6px; text-transform: uppercase;}
+        .tl-text { background: rgba(118, 118, 128, 0.08); padding: 12px; border-radius: 14px; border: 1px solid var(--border); color: var(--text-main); }
+        
+        .mic-btn { background: rgba(50, 215, 75, 0.15); border: none; color: var(--success); width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 20px; padding:0;}
+        .mic-btn.recording { background: var(--accent); color: white; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        .tl-image-preview { max-width: 100%; max-height: 120px; border-radius: 10px; border: 1px solid var(--border); margin-top: 8px; cursor: pointer; }
+
+        /* =========================================
+           ПОДВАЛ (БРЕНДИНГ V-SYSTEM)
+           ========================================= */
+        .app-footer { text-align: center; margin-top: 40px; padding-top: 20px; padding-bottom: 20px; border-top: 1px solid var(--border); font-size: 0.8em; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600; }
     </style>
 </head>
 <body>
-    <div id="login-screen">
-        <div class="login-box">
-            <h2>🔐 Вход в CRM</h2>
+    <div id="login-screen" class="login-overlay">
+        <div class="login-card">
+            <h1 class="brand-title">V-SYSTEM</h1>
+            <h2 class="trackflow-title">Trackflow Logistics</h2>
             <div id="login-error">Неверный логин или пароль</div>
-            <input type="text" id="login-username" class="login-input" placeholder="Логин">
-            <input type="password" id="login-password" class="login-input" placeholder="Пароль">
-            <button class="btn-login" onclick="attemptLogin()">Войти в систему</button>
+            <input type="text" id="login-username" placeholder="Логин" style="text-align: center; letter-spacing: 2px; font-weight: 700;">
+            <input type="password" id="login-password" placeholder="Пароль" style="text-align: center; letter-spacing: 2px; font-weight: 700;">
+            <button onclick="attemptLogin()" class="btn-solid-primary" style="width: 100%; margin-top: 15px;">Войти в систему</button>
         </div>
     </div>
 
     <div id="app-content">
         <div class="container">
-            <div class="header-flex">
-                <h1>Аналитика и Мониторинг рейсов</h1>
-                <button class="btn-cancel btn-small" style="width: auto; padding: 8px 15px;" onclick="logout()">🚪 Выйти</button>
+            <div class="app-header">
+                <div class="header-titles">
+                    <h1 class="brand-title">V-SYSTEM</h1>
+                    <h2 class="trackflow-title">Trackflow Logistics</h2>
+                </div>
+                <div class="header-controls">
+                    <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()" title="Сменить тему">🌙</button>
+                    <button class="btn-cancel" style="border-radius: 20px;" onclick="logout()">🚪 Выйти</button>
+                </div>
             </div>
 
             <div class="dashboard">
-                <div class="dash-card"><h4>Рейсов на экране</h4><div class="dash-value" id="dash-total">0</div></div>
-                <div class="dash-card"><h4>Чистая маржа</h4><div class="dash-value margin-val" id="dash-margin">0 ₽</div></div>
-                <div class="dash-card"><h4>Требуют внимания</h4><div class="dash-value margin-negative" id="dash-problems">0</div></div>
+                <div class="dash-card glass-card"><h4>Рейсов на экране</h4><div class="dash-value" id="dash-total">0</div></div>
+                <div class="dash-card glass-card"><h4>Чистая маржа</h4><div class="dash-value margin-val" id="dash-margin">0 ₽</div></div>
+                <div class="dash-card glass-card"><h4>Требуют внимания</h4><div class="dash-value margin-negative" id="dash-problems">0</div></div>
             </div>
 
             <div class="charts-container">
-                <div class="chart-box"><canvas id="marginChart"></canvas></div>
-                <div class="chart-box"><canvas id="expensesChart"></canvas></div>
+                <div class="chart-box glass-card"><canvas id="marginChart"></canvas></div>
+                <div class="chart-box glass-card"><canvas id="expensesChart"></canvas></div>
             </div>
 
-            <div class="form-card">
+            <div class="form-card glass-card">
                 <h3>Создать новый рейс</h3>
                 <form id="add-order-form">
                     <div class="form-grid">
@@ -121,119 +210,97 @@
                         
                         <div class="form-group"><label>Тип ТС</label>
                             <select id="f-vehicle-type">
-                                <option value="Тент">Тент</option>
-                                <option value="Реф">Реф</option>
-                                <option value="Изотерм">Изотерм</option>
-                                <option value="Трал">Трал</option>
-                                <option value="Фургон">Фургон</option>
-                                <option value="Контейнер">Контейнер</option>
+                                <option value="Тент">Тент</option><option value="Реф">Реф</option><option value="Изотерм">Изотерм</option><option value="Трал">Трал</option><option value="Фургон">Фургон</option><option value="Контейнер">Контейнер</option>
                             </select>
                         </div>
                         <div class="form-group"><label>Номер авто</label><input type="text" id="f-vehicle-number" list="vehicles-list" autocomplete="off" placeholder="А123АА77"></div>
                         
                         <div class="form-group"><label>Валюта</label>
                             <select id="f-currency">
-                                <option value="₽">₽ (RUB)</option>
-                                <option value="$">$ (USD)</option>
-                                <option value="€">€ (EUR)</option>
-                                <option value="Br">Br (BYN)</option>
-                                <option value="₸">₸ (KZT)</option>
+                                <option value="₽">₽ (RUB)</option><option value="$">$ (USD)</option><option value="€">€ (EUR)</option><option value="Br">Br (BYN)</option><option value="₸">₸ (KZT)</option>
                             </select>
                         </div>
-                        <div class="form-group"><label>Ставка клиента</label><input type="number" id="f-client-rate" required></div>
-                        <div class="form-group"><label>Ставка подрядчика</label><input type="number" id="f-contractor-rate" required></div>
+                        <div class="form-group"><label>Ставка кл.</label><input type="number" id="f-client-rate" required></div>
+                        <div class="form-group"><label>Ставка подр.</label><input type="number" id="f-contractor-rate" required></div>
                     </div>
-                    <button type="submit">+ Добавить рейс</button>
+                    <button type="submit" class="btn-solid-primary">+ Добавить рейс</button>
                 </form>
             </div>
 
-            <div class="filter-panel">
-                <span>📅 Фильтр по дате:</span>
+            <div class="filter-panel glass-card">
+                <span>📅 Период:</span>
                 <button class="btn-filter active" id="btn-filter-all" onclick="setDateFilter('all', this)">Все время</button>
                 <button class="btn-filter" id="btn-filter-current" onclick="setDateFilter('currentMonth', this)">Этот месяц</button>
                 <button class="btn-filter" id="btn-filter-last" onclick="setDateFilter('lastMonth', this)">Прошлый месяц</button>
             </div>
 
             <div class="toolbar">
-                <input type="text" id="search-input" class="search-box" placeholder="🔍 Умный поиск по всем полям..." oninput="filterOrders()">
-                <button class="btn-cyan" onclick="exportToJson()">💾 Скачать базу (JSON)</button>
-                <button class="btn-excel" onclick="exportToExcel()">📊 Скачать в Excel</button>
-                <button class="btn-orange" style="font-size: 14px; padding: 12px 20px;" onclick="exportTo1C()">🔄 Выгрузка для 1С (CSV)</button>
+                <input type="text" id="search-input" class="search-box glass-card" placeholder="🔍 Поиск по клиенту, авто или маршруту..." oninput="filterOrders()">
+                <button class="btn-blue" onclick="exportToJson()">💾 JSON</button>
+                <button class="btn-success" onclick="exportToExcel()">📊 Excel</button>
+                <button class="btn-orange" onclick="exportTo1C()">🔄 1С Выгрузка</button>
             </div>
 
-            <div id="bulk-bar" style="display: none; background: #fff3cd; padding: 10px 15px; border: 1px solid #ffeeba; border-radius: 6px; margin-bottom: 10px; align-items: center; justify-content: space-between;">
-                <span id="bulk-count" style="font-weight: bold; color: #856404; font-size: 14px;">Выбрано: 0</span>
-                <button class="btn-cancel" style="width: auto; padding: 8px 20px;" onclick="bulkDelete()">🗑️ Удалить выбранные</button>
+            <div id="bulk-bar" class="glass-card" style="display: none; background: rgba(255, 149, 0, 0.15); padding: 15px; margin-bottom: 15px; align-items: center; justify-content: space-between;">
+                <span id="bulk-count" style="font-weight: bold; color: var(--accent); font-size: 14px;">Выбрано: 0</span>
+                <button class="btn-cancel" style="width: auto;" onclick="bulkDelete()">🗑️ Удалить выбранные</button>
             </div>
 
-            <table>
-                <thead>
-                    <tr>
-                        <th style="width: 30px; text-align: center;"><input type="checkbox" id="selectAll" onchange="toggleAll(this.checked)" style="cursor: pointer;"></th>
-                        <th>Даты (Заявка / Загр / Выгр)</th>
-                        <th>Клиент / Подрядчик</th>
-                        <th>Маршрут / Авто</th>
-                        <th>Ставки / Валюта</th>
-                        <th>Статусы (Рейс / Оплата)</th>
-                        <th>Доп. расходы</th>
-                        <th>Маржа (Прибыль)</th>
-                        <th>Действия</th>
-                    </tr>
-                </thead>
-                <tbody id="orders-table-body"></tbody>
-            </table>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 30px; text-align: center; border-right: 1px solid var(--border);"><input type="checkbox" id="selectAll" onchange="toggleAll(this.checked)" style="cursor: pointer; width:16px; height:16px; margin:0;"></th>
+                            <th>Даты (Заявка/Загр/Выгр)</th>
+                            <th>Клиент / Подрядчик</th>
+                            <th>Маршрут / Авто</th>
+                            <th>Ставки / Валюта</th>
+                            <th>Статусы (Рейс/Оплата)</th>
+                            <th>Доп. расходы</th>
+                            <th>Маржа (Прибыль)</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="orders-table-body"></tbody>
+                </table>
+            </div>
+
+            <div class="app-footer">
+                © 2026 V-SYSTEM TRACKFLOW. Все права защищены.
+            </div>
         </div>
     </div>
 
-    <datalist id="clients-list"></datalist>
-    <datalist id="contractors-list"></datalist>
-    <datalist id="routes-list"></datalist>
-    <datalist id="vehicles-list"></datalist>
+    <datalist id="clients-list"></datalist><datalist id="contractors-list"></datalist><datalist id="routes-list"></datalist><datalist id="vehicles-list"></datalist>
 
-    <div class="modal-overlay" id="expense-modal"><div class="modal-box"><h3>Добавить расход</h3><div class="form-group" style="margin-bottom: 10px;"><label>Категория</label><select id="modal-category"><option value="Штраф">Штраф</option><option value="Простой">Простой</option><option value="Перегруз">Перегруз</option><option value="Опоздание">Опоздание</option><option value="Страховка">Страховка</option><option value="Прочее">Прочее</option></select></div><div class="form-group"><label>Сумма</label><input type="number" id="modal-amount"></div><div class="modal-btn-group"><button class="btn-cancel" onclick="closeExpenseModal()">Отмена</button><button onclick="submitExpense()">Сохранить</button></div></div></div>
+    <div class="modal-overlay" id="expense-modal"><div class="modal-box"><h3>Добавить расход</h3><div class="form-group" style="margin-bottom: 15px;"><label>Категория</label><select id="modal-category"><option value="Штраф">Штраф</option><option value="Простой">Простой</option><option value="Перегруз">Перегруз</option><option value="Опоздание">Опоздание</option><option value="Страховка">Страховка</option><option value="Прочее">Прочее</option></select></div><div class="form-group"><label>Сумма</label><input type="number" id="modal-amount"></div><div class="modal-btn-group"><button class="btn-cancel" onclick="closeExpenseModal()">Отмена</button><button class="btn-solid-primary" onclick="submitExpense()">Сохранить</button></div></div></div>
     
     <div class="modal-overlay" id="edit-modal">
         <div class="modal-box" style="width: 550px;">
             <h3>✏️ Редактировать рейс</h3>
             <div class="form-grid" style="grid-template-columns: 1fr 1fr 1fr;">
-                <div class="form-group"><label>Заявка</label><input type="date" id="e-date"></div>
-                <div class="form-group"><label>Загрузка</label><input type="date" id="e-loading-date"></div>
-                <div class="form-group"><label>Выгрузка</label><input type="date" id="e-unloading-date"></div>
-                
-                <div class="form-group"><label>Клиент</label><input type="text" id="e-client" list="clients-list"></div>
-                <div class="form-group"><label>Подрядчик</label><input type="text" id="e-contractor" list="contractors-list"></div>
-                <div class="form-group"><label>Маршрут</label><input type="text" id="e-route" list="routes-list"></div>
-                
-                <div class="form-group"><label>Тип ТС</label>
-                    <select id="e-vehicle-type">
-                        <option value="Тент">Тент</option><option value="Реф">Реф</option><option value="Изотерм">Изотерм</option><option value="Трал">Трал</option><option value="Фургон">Фургон</option><option value="Контейнер">Контейнер</option>
-                    </select>
-                </div>
+                <div class="form-group"><label>Заявка</label><input type="date" id="e-date"></div><div class="form-group"><label>Загрузка</label><input type="date" id="e-loading-date"></div><div class="form-group"><label>Выгрузка</label><input type="date" id="e-unloading-date"></div>
+                <div class="form-group"><label>Клиент</label><input type="text" id="e-client" list="clients-list"></div><div class="form-group"><label>Подрядчик</label><input type="text" id="e-contractor" list="contractors-list"></div><div class="form-group"><label>Маршрут</label><input type="text" id="e-route" list="routes-list"></div>
+                <div class="form-group"><label>Тип ТС</label><select id="e-vehicle-type"><option value="Тент">Тент</option><option value="Реф">Реф</option><option value="Изотерм">Изотерм</option><option value="Трал">Трал</option><option value="Фургон">Фургон</option><option value="Контейнер">Контейнер</option></select></div>
                 <div class="form-group"><label>Номер авто</label><input type="text" id="e-vehicle-number" list="vehicles-list"></div>
-                <div class="form-group"><label>Валюта</label>
-                    <select id="e-currency">
-                        <option value="₽">₽</option><option value="$">$</option><option value="€">€</option><option value="Br">Br</option><option value="₸">₸</option>
-                    </select>
-                </div>
-                
-                <div class="form-group"><label>Ставка кл.</label><input type="number" id="e-client-rate"></div>
-                <div class="form-group"><label>Ставка подр.</label><input type="number" id="e-contractor-rate"></div>
+                <div class="form-group"><label>Валюта</label><select id="e-currency"><option value="₽">₽</option><option value="$">$</option><option value="€">€</option><option value="Br">Br</option><option value="₸">₸</option></select></div>
+                <div class="form-group"><label>Ставка кл.</label><input type="number" id="e-client-rate"></div><div class="form-group"><label>Ставка подр.</label><input type="number" id="e-contractor-rate"></div>
             </div>
-            <div class="modal-btn-group"><button class="btn-cancel" onclick="closeEditModal()">Отмена</button><button class="btn-blue" onclick="submitEdit()">Сохранить</button></div>
+            <div class="modal-btn-group"><button class="btn-cancel" onclick="closeEditModal()">Отмена</button><button class="btn-solid-primary" onclick="submitEdit()">Сохранить</button></div>
         </div>
     </div>
     
-    <div class="modal-overlay" id="docs-modal"><div class="modal-box" style="width: 320px;"><h3 style="border-bottom-color: #fd7e14;">📄 Печать документов</h3><div style="display: flex; flex-direction: column; gap: 10px;"><button class="btn-blue" onclick="generateInvoice()" style="width: 100%; padding: 12px;">🧾 Счет Клиенту</button><button class="btn-orange" onclick="generateContractorOrder()" style="width: 100%; padding: 12px; color: white;">🚚 Заявка Перевозчику</button></div><div class="modal-btn-group" style="margin-top: 15px;"><button class="btn-cancel" onclick="closeDocsModal()" style="width: 100%;">Отмена</button></div></div></div>
+    <div class="modal-overlay" id="docs-modal"><div class="modal-box" style="width: 320px;"><h3>📄 Печать документов</h3><div style="display: flex; flex-direction: column; gap: 10px;"><button class="btn-blue" onclick="generateInvoice()" style="width: 100%;">🧾 Счет Клиенту</button><button class="btn-orange" onclick="generateContractorOrder()" style="width: 100%;">🚚 Заявка Перевозчику</button></div><div class="modal-btn-group" style="margin-top: 15px;"><button class="btn-cancel" onclick="closeDocsModal()" style="width: 100%;">Отмена</button></div></div></div>
     
     <div class="modal-overlay" id="notes-modal">
-        <div class="modal-box" style="width: 400px;">
-            <h3 style="border-bottom-color: #6f42c1; color: #6f42c1;">📖 Досье рейса</h3>
-            <div style="display: flex; gap: 8px; margin-bottom: 15px;">
+        <div class="modal-box" style="width: 450px;">
+            <h3>📖 Досье рейса</h3>
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
                 <input type="file" id="n_file_upload" style="display: none;" onchange="uploadFile()">
-                <button class="mic-btn" style="border-color: #fd7e14; color: #fd7e14; background: #fff3cd;" onclick="document.getElementById('n_file_upload').click()" title="Прикрепить скан/ТТН">📎</button>
-                <input type="text" id="n_new_note" class="form-group" style="flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 6px; outline: none;" placeholder="Текст, голос или файл...">
+                <button class="mic-btn" style="color: var(--accent); background: rgba(255, 149, 0, 0.15);" onclick="document.getElementById('n_file_upload').click()" title="Прикрепить скан/ТТН">📎</button>
+                <input type="text" id="n_new_note" style="margin-bottom:0; flex:1;" placeholder="Текст, голос или файл...">
                 <button id="micBtn" class="mic-btn" onclick="startVoiceRecognition()" title="Голосовой ввод">🎙️</button>
-                <button style="background: #007bff; color: white; border: none; padding: 0 15px; border-radius: 6px; cursor: pointer; font-weight: bold;" onclick="submitNote()">Отправить</button>
+                <button class="btn-solid-primary" style="padding: 0 20px;" onclick="submitNote()">➤</button>
             </div>
             <div class="timeline" id="notes-timeline"></div>
             <div class="modal-btn-group"><button class="btn-cancel" onclick="closeNotesModal()" style="width: 100%;">Закрыть</button></div>
@@ -241,6 +308,22 @@
     </div>
 
     <script>
+        // ИНИЦИАЛИЗАЦИЯ ТЕМЫ
+        function initTheme() {
+            if(localStorage.getItem('crm_theme') === 'dark') {
+                document.body.classList.add('dark-theme');
+                document.getElementById('theme-btn').innerText = '☀️';
+            }
+        }
+        function toggleTheme() {
+            document.body.classList.toggle('dark-theme');
+            const isDark = document.body.classList.contains('dark-theme');
+            localStorage.setItem('crm_theme', isDark ? 'dark' : 'light');
+            document.getElementById('theme-btn').innerText = isDark ? '☀️' : '🌙';
+            if(globalOrders.length > 0) updateCharts(globalOrders); 
+        }
+        initTheme();
+
         function checkAuth() { const token = localStorage.getItem('crm_token'); if (token) { document.getElementById('login-screen').style.display = 'none'; document.getElementById('app-content').style.display = 'block'; loadOrders(); } else { document.getElementById('login-screen').style.display = 'flex'; document.getElementById('app-content').style.display = 'none'; } }
         function attemptLogin() { const user = document.getElementById('login-username').value; const pass = document.getElementById('login-password').value; fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: user, password: pass }) }).then(res => res.json()).then(data => { if (data.status === 'success') { localStorage.setItem('crm_token', data.token); document.getElementById('login-error').style.display = 'none'; checkAuth(); } else { document.getElementById('login-error').style.display = 'block'; } }); }
         function logout() { localStorage.removeItem('crm_token'); checkAuth(); }
@@ -248,7 +331,7 @@
 
         let globalOrders = []; let currentOrderId = null; let selectedIds = new Set();
         let chartMarginInst = null; let chartExpInst = null;
-        let currentDateFilter = 'all'; // Переменная для хранения текущего фильтра
+        let currentDateFilter = 'all';
 
         function updateDatalists(data) {
             const clients = new Set(); const contractors = new Set(); const routes = new Set(); const vehicles = new Set();
@@ -280,13 +363,17 @@
             });
             const sortedMonths = Object.keys(marginByMonth).sort(); const marginData = sortedMonths.map(m => marginByMonth[m]);
 
+            const textColor = document.body.classList.contains('dark-theme') ? '#ffffff' : '#000000';
+            Chart.defaults.color = textColor; 
+            Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Inter', sans-serif";
+
             if(chartMarginInst) chartMarginInst.destroy();
             const ctxM = document.getElementById('marginChart').getContext('2d');
-            chartMarginInst = new Chart(ctxM, { type: 'line', data: { labels: sortedMonths.length > 0 ? sortedMonths : ['Нет данных'], datasets: [{ label: 'Чистая прибыль', data: marginData.length > 0 ? marginData : [0], borderColor: '#007bff', backgroundColor: 'rgba(0, 123, 255, 0.15)', borderWidth: 3, fill: true, tension: 0.4, pointRadius: 6, pointBackgroundColor: '#ffffff', pointBorderColor: '#007bff', pointBorderWidth: 2 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'Динамика прибыли по месяцам', font: { size: 16 } } }, scales: { y: { beginAtZero: true }, x: { grid: { display: false } } } } });
+            chartMarginInst = new Chart(ctxM, { type: 'line', data: { labels: sortedMonths.length > 0 ? sortedMonths : ['Нет данных'], datasets: [{ label: 'Чистая прибыль', data: marginData.length > 0 ? marginData : [0], borderColor: '#0A84FF', backgroundColor: 'rgba(10, 132, 255, 0.15)', borderWidth: 3, fill: true, tension: 0.4, pointRadius: 6, pointBackgroundColor: '#ffffff', pointBorderColor: '#0A84FF', pointBorderWidth: 2 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'Динамика прибыли по месяцам', font: { size: 15, weight: 'bold' } }, legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(150,150,150,0.1)' } }, x: { grid: { display: false } } } } });
 
             if(chartExpInst) chartExpInst.destroy();
             const ctxE = document.getElementById('expensesChart').getContext('2d');
-            chartExpInst = new Chart(ctxE, { type: 'doughnut', data: { labels: expLabels.length > 0 ? expLabels : ['Нет расходов'], datasets: [{ data: expData.length > 0 ? expData : [1], backgroundColor: ['#dc3545', '#ffc107', '#fd7e14', '#6f42c1', '#0dcaf0', '#6c757d'], }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'Утечки бюджета (Доп. расходы)', font: { size: 16 } } } } });
+            chartExpInst = new Chart(ctxE, { type: 'doughnut', data: { labels: expLabels.length > 0 ? expLabels : ['Нет расходов'], datasets: [{ data: expData.length > 0 ? expData : [1], backgroundColor: ['#FF453A', '#FF9500', '#AF52DE', '#30D158', '#0A84FF', '#8E8E93'], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'Утечки бюджета (Доп. расходы)', font: { size: 15, weight: 'bold' } } } } });
         }
 
         function updateDashboard(data) {
@@ -304,7 +391,7 @@
             updateDashboard(dataToRender); updateCharts(dataToRender); 
             const tableBody = document.getElementById('orders-table-body'); tableBody.innerHTML = ''; 
             
-            const tripColors = { 'На погрузке': 'background-color: #e2e3e5; color: #383d41;', 'В пути': 'background-color: #cce5ff; color: #004085;', 'На выгрузке': 'background-color: #fff3cd; color: #856404;', 'Завершен': 'background-color: #d4edda; color: #155724;' };
+            const tripColors = { 'На погрузке': 'background: rgba(142, 142, 147, 0.15); color: var(--text-muted);', 'В пути': 'background: rgba(10, 132, 255, 0.15); color: var(--primary);', 'На выгрузке': 'background: rgba(255, 149, 0, 0.15); color: var(--accent);', 'Завершен': 'background: rgba(50, 215, 75, 0.15); color: var(--success);' };
 
             dataToRender.forEach(order => {
                 const totalExtra = order.extraExpenses ? order.extraExpenses.reduce((sum, exp) => sum + exp.amount, 0) : 0; 
@@ -313,7 +400,7 @@
                 const colorClass = getColorClass(order.paymentStatus);
                 const curr = order.currency || '₽';
                 
-                let expensesHtml = order.extraExpenses ? order.extraExpenses.map(e => `<span class="extra-box"><b>${e.category}:</b> ${e.amount} ${curr}</span>`).join('') : ''; expensesHtml += `<button class="btn-small" onclick="openExpenseModal(${order.id})">+ Добавить расход</button>`;
+                let expensesHtml = order.extraExpenses ? order.extraExpenses.map(e => `<span class="extra-box"><b>${e.category}:</b> ${e.amount} ${curr}</span>`).join('') : ''; expensesHtml += `<button class="btn-small btn-blue" onclick="openExpenseModal(${order.id})">+ Добавить расход</button>`;
                 const isChecked = selectedIds.has(order.id) ? 'checked' : '';
                 const tColor = tripColors[order.tripStatus] || tripColors['На погрузке'];
 
@@ -321,10 +408,10 @@
                     <td style="text-align: center; vertical-align: middle;"><input type="checkbox" class="row-checkbox" value="${order.id}" ${isChecked} onchange="toggleRow(${order.id}, this.checked)" style="cursor: pointer; width: 16px; height: 16px;"></td>
                     <td>
                         <div class="info-cell">📋 Заявка: <b>${order.orderDate}</b></div>
-                        <div class="info-cell">🔼 Загрузка: <b>${order.loadingDate ? order.loadingDate.split('-').reverse().join('.') : '—'}</b></div>
-                        <div class="info-cell">🔽 Выгрузка: <b>${order.unloadingDate ? order.unloadingDate.split('-').reverse().join('.') : '—'}</b></div>
+                        <div class="info-cell">🔼 Загр: <b>${order.loadingDate ? order.loadingDate.split('-').reverse().join('.') : '—'}</b></div>
+                        <div class="info-cell">🔽 Выгр: <b>${order.unloadingDate ? order.unloadingDate.split('-').reverse().join('.') : '—'}</b></div>
                     </td>
-                    <td><div class="info-cell">👤 ${order.clientName}</div><div>🏢 ${order.contractorName}</div></td>
+                    <td><div class="info-cell">👤 <b>${order.clientName}</b></div><div>🏢 ${order.contractorName}</div></td>
                     <td>
                         <div class="info-cell">📍 ${order.route || '—'}</div>
                         <div>🚚 ${order.vehicleType || '—'} | <b>${order.vehicleNumber || '—'}</b></div>
@@ -334,7 +421,7 @@
                         <div>Подряд: ${Number(order.contractorRate).toLocaleString()} ${curr}</div>
                     </td>
                     <td>
-                        <select style="border:none; padding:4px 8px; border-radius:4px; font-weight:bold; cursor:pointer; outline:none; font-size:11px; margin-bottom:5px; width:100%; ${tColor}" onchange="updateTripStatus(${order.id}, this.value)">
+                        <select style="width:100%; ${tColor}" class="status-select" onchange="updateTripStatus(${order.id}, this.value)">
                             <option value="На погрузке" ${order.tripStatus === 'На погрузке' ? 'selected' : ''}>📍 На погрузке</option>
                             <option value="В пути" ${order.tripStatus === 'В пути' ? 'selected' : ''}>🚚 В пути</option>
                             <option value="На выгрузке" ${order.tripStatus === 'На выгрузке' ? 'selected' : ''}>🏁 На выгрузке</option>
@@ -347,12 +434,16 @@
                         </select>
                     </td>
                     <td>${expensesHtml}</td>
-                    <td class="${marginClass}">${finalMargin.toLocaleString()} ${curr}</td>
+                    <td class="${marginClass}" style="font-size: 14px;">${finalMargin.toLocaleString()} ${curr}</td>
                     <td>
-                        <button class="btn-small btn-purple" onclick="openNotesModal(${order.id})" style="margin-bottom: 5px;">📖 Досье</button>
-                        <button class="btn-small btn-orange" onclick="openDocsModal(${order.id})" style="margin-bottom: 5px; color: white;">📄 Документы</button>
-                        <button class="btn-small btn-blue" onclick="openEditModal(${order.id})">✏️ Изменить</button>
-                        <button class="btn-small btn-cancel" onclick="deleteOrder(${order.id})">🗑️ Удалить</button>
+                        <div style="display:flex; gap:5px; margin-bottom:5px;">
+                            <button class="btn-small btn-purple" onclick="openNotesModal(${order.id})">📖 Досье</button>
+                            <button class="btn-small btn-orange" onclick="openDocsModal(${order.id})">📄 Доки</button>
+                        </div>
+                        <div style="display:flex; gap:5px;">
+                            <button class="btn-small btn-blue" onclick="openEditModal(${order.id})">✏️ Изменить</button>
+                            <button class="btn-small btn-cancel" onclick="deleteOrder(${order.id})">🗑️ Удал.</button>
+                        </div>
                     </td>
                 </tr>`;
                 tableBody.innerHTML += row;
@@ -365,70 +456,27 @@
         function bulkDelete() { if (!confirm(`Вы уверены, что хотите безвозвратно удалить ${selectedIds.size} рейсов?`)) return; const deletePromises = Array.from(selectedIds).map(id => fetch(`/api/orders/${id}`, { method: 'DELETE' })); Promise.all(deletePromises).then(() => { selectedIds.clear(); updateBulkBar(); document.getElementById('selectAll').checked = false; loadOrders(); }); }
         function exportToJson() { const dataStr = JSON.stringify(globalOrders, null, 2); const blob = new Blob([dataStr], { type: "application/json" }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; const dateStr = new Date().toLocaleDateString('ru-RU').replace(/\./g, '-'); a.download = `Logistic_Backup_${dateStr}.json`; a.click(); URL.revokeObjectURL(url); }
         
-        // НОВАЯ ЛОГИКА: Изменение активной кнопки фильтра
-        function setDateFilter(filterType, btnElement) {
-            currentDateFilter = filterType;
-            document.querySelectorAll('.btn-filter').forEach(btn => btn.classList.remove('active'));
-            btnElement.classList.add('active');
-            filterOrders(); // Запускаем фильтрацию заново
-        }
+        function setDateFilter(filterType, btnElement) { currentDateFilter = filterType; document.querySelectorAll('.btn-filter').forEach(btn => btn.classList.remove('active')); btnElement.classList.add('active'); filterOrders(); }
 
-        // ОБНОВЛЕННАЯ ЛОГИКА: Фильтрация и по тексту, и по датам
         function filterOrders() { 
             const query = document.getElementById('search-input').value.toLowerCase(); 
-            
-            // Определяем диапазоны дат для фильтра
-            const now = new Date();
-            let startDate = null;
-            let endDate = null;
+            const now = new Date(); let startDate = null; let endDate = null;
 
-            if (currentDateFilter === 'currentMonth') {
-                startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-                endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-            } else if (currentDateFilter === 'lastMonth') {
-                startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-                endDate = new Date(now.getFullYear(), now.getMonth(), 0);
-            }
+            if (currentDateFilter === 'currentMonth') { startDate = new Date(now.getFullYear(), now.getMonth(), 1); endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0); } 
+            else if (currentDateFilter === 'lastMonth') { startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1); endDate = new Date(now.getFullYear(), now.getMonth(), 0); }
 
             const filteredData = globalOrders.filter(order => {
-                // 1. Проверка текстового поиска
-                const matchesSearch = order.clientName.toLowerCase().includes(query) || 
-                                      order.contractorName.toLowerCase().includes(query) || 
-                                      (order.route && order.route.toLowerCase().includes(query)) || 
-                                      (order.vehicleNumber && order.vehicleNumber.toLowerCase().includes(query));
-                
-                // 2. Проверка фильтра по дате
+                const matchesSearch = order.clientName.toLowerCase().includes(query) || order.contractorName.toLowerCase().includes(query) || (order.route && order.route.toLowerCase().includes(query)) || (order.vehicleNumber && order.vehicleNumber.toLowerCase().includes(query));
                 let matchesDate = true;
-                if (startDate && endDate) {
-                    const orderDate = new Date(order.orderDate);
-                    matchesDate = orderDate >= startDate && orderDate <= endDate;
-                }
-
+                if (startDate && endDate) { const orderDate = new Date(order.orderDate); matchesDate = orderDate >= startDate && orderDate <= endDate; }
                 return matchesSearch && matchesDate;
             }); 
-            
             renderTable(filteredData); 
         }
         
         function loadOrders() { fetch('/api/orders').then(res => res.json()).then(data => { globalOrders = data.data; filterOrders(); updateDatalists(globalOrders); }); }
 
-        document.getElementById('add-order-form').addEventListener('submit', function(e) { 
-            e.preventDefault(); 
-            const newOrderData = { 
-                orderDate: document.getElementById('f-date').value, 
-                loadingDate: document.getElementById('f-loading-date').value, 
-                unloadingDate: document.getElementById('f-unloading-date').value, 
-                clientName: document.getElementById('f-client').value, 
-                contractorName: document.getElementById('f-contractor').value, 
-                route: document.getElementById('f-route').value, 
-                vehicleType: document.getElementById('f-vehicle-type').value, 
-                vehicleNumber: document.getElementById('f-vehicle-number').value, 
-                currency: document.getElementById('f-currency').value, 
-                clientRate: document.getElementById('f-client-rate').value, 
-                contractorRate: document.getElementById('f-contractor-rate').value 
-            }; 
-            fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newOrderData) }).then(() => { document.getElementById('add-order-form').reset(); loadOrders(); }); 
-        });
+        document.getElementById('add-order-form').addEventListener('submit', function(e) { e.preventDefault(); const newOrderData = { orderDate: document.getElementById('f-date').value, loadingDate: document.getElementById('f-loading-date').value, unloadingDate: document.getElementById('f-unloading-date').value, clientName: document.getElementById('f-client').value, contractorName: document.getElementById('f-contractor').value, route: document.getElementById('f-route').value, vehicleType: document.getElementById('f-vehicle-type').value, vehicleNumber: document.getElementById('f-vehicle-number').value, currency: document.getElementById('f-currency').value, clientRate: document.getElementById('f-client-rate').value, contractorRate: document.getElementById('f-contractor-rate').value }; fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newOrderData) }).then(() => { document.getElementById('add-order-form').reset(); loadOrders(); }); });
 
         function updatePaymentStatus(orderId, newStatus) { fetch(`/api/orders/${orderId}/status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus }) }).then(() => loadOrders()); }
         function updateTripStatus(orderId, newStatus) { fetch(`/api/orders/${orderId}/trip_status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus }) }).then(() => loadOrders()); }
@@ -437,40 +485,9 @@
         function submitExpense() { const category = document.getElementById('modal-category').value; const amount = document.getElementById('modal-amount').value; if (!amount || amount <= 0) return alert("Ошибка: введите корректную сумму!"); fetch(`/api/orders/${currentOrderId}/expenses`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ category: category, amount: amount }) }).then(() => { closeExpenseModal(); loadOrders(); }); }
         function deleteOrder(orderId) { if(confirm("Вы уверены, что хотите удалить этот рейс?")) { fetch(`/api/orders/${orderId}`, { method: 'DELETE' }).then(() => loadOrders()); } }
         
-        function openEditModal(orderId) { 
-            currentOrderId = orderId; const order = globalOrders.find(o => o.id === orderId); 
-            document.getElementById('e-date').value = order.orderDate; 
-            document.getElementById('e-loading-date').value = order.loadingDate || ''; 
-            document.getElementById('e-unloading-date').value = order.unloadingDate || ''; 
-            document.getElementById('e-client').value = order.clientName; 
-            document.getElementById('e-contractor').value = order.contractorName; 
-            document.getElementById('e-route').value = order.route; 
-            document.getElementById('e-vehicle-type').value = order.vehicleType || 'Тент'; 
-            document.getElementById('e-vehicle-number').value = order.vehicleNumber || ''; 
-            document.getElementById('e-currency').value = order.currency || '₽'; 
-            document.getElementById('e-client-rate').value = order.clientRate; 
-            document.getElementById('e-contractor-rate').value = order.contractorRate; 
-            document.getElementById('edit-modal').style.display = 'flex'; 
-        }
+        function openEditModal(orderId) { currentOrderId = orderId; const order = globalOrders.find(o => o.id === orderId); document.getElementById('e-date').value = order.orderDate; document.getElementById('e-loading-date').value = order.loadingDate || ''; document.getElementById('e-unloading-date').value = order.unloadingDate || ''; document.getElementById('e-client').value = order.clientName; document.getElementById('e-contractor').value = order.contractorName; document.getElementById('e-route').value = order.route; document.getElementById('e-vehicle-type').value = order.vehicleType || 'Тент'; document.getElementById('e-vehicle-number').value = order.vehicleNumber || ''; document.getElementById('e-currency').value = order.currency || '₽'; document.getElementById('e-client-rate').value = order.clientRate; document.getElementById('e-contractor-rate').value = order.contractorRate; document.getElementById('edit-modal').style.display = 'flex'; }
         function closeEditModal() { document.getElementById('edit-modal').style.display = 'none'; }
-        
-        function submitEdit() { 
-            const updatedData = { 
-                orderDate: document.getElementById('e-date').value, 
-                loadingDate: document.getElementById('e-loading-date').value, 
-                unloadingDate: document.getElementById('e-unloading-date').value, 
-                clientName: document.getElementById('e-client').value, 
-                contractorName: document.getElementById('e-contractor').value, 
-                route: document.getElementById('e-route').value, 
-                vehicleType: document.getElementById('e-vehicle-type').value, 
-                vehicleNumber: document.getElementById('e-vehicle-number').value, 
-                currency: document.getElementById('e-currency').value, 
-                clientRate: document.getElementById('e-client-rate').value, 
-                contractorRate: document.getElementById('e-contractor-rate').value 
-            }; 
-            fetch(`/api/orders/${currentOrderId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updatedData) }).then(() => { closeEditModal(); loadOrders(); }); 
-        }
-
+        function submitEdit() { const updatedData = { orderDate: document.getElementById('e-date').value, loadingDate: document.getElementById('e-loading-date').value, unloadingDate: document.getElementById('e-unloading-date').value, clientName: document.getElementById('e-client').value, contractorName: document.getElementById('e-contractor').value, route: document.getElementById('e-route').value, vehicleType: document.getElementById('e-vehicle-type').value, vehicleNumber: document.getElementById('e-vehicle-number').value, currency: document.getElementById('e-currency').value, clientRate: document.getElementById('e-client-rate').value, contractorRate: document.getElementById('e-contractor-rate').value }; fetch(`/api/orders/${currentOrderId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updatedData) }).then(() => { closeEditModal(); loadOrders(); }); }
         function exportToExcel() { const excelData = globalOrders.map(order => { const totalExtra = order.extraExpenses ? order.extraExpenses.reduce((sum, exp) => sum + exp.amount, 0) : 0; const finalMargin = order.clientRate - order.contractorRate - totalExtra; const expensesText = order.extraExpenses && order.extraExpenses.length > 0 ? order.extraExpenses.map(e => `${e.category}: ${e.amount} ${order.currency||'₽'}`).join(' | ') : "Нет расходов"; return { "Дата заявки": order.orderDate, "Дата загрузки": order.loadingDate || "", "Дата выгрузки": order.unloadingDate || "", "Клиент": order.clientName, "Подрядчик": order.contractorName, "Маршрут": order.route || "", "Тип ТС": order.vehicleType || "", "Номер авто": order.vehicleNumber || "", "Валюта": order.currency || "₽", "Ставка клиента": Number(order.clientRate), "Ставка подрядчика": Number(order.contractorRate), "Статус рейса": order.tripStatus, "Статус оплаты": order.paymentStatus, "Доп. расходы": expensesText, "Чистая Прибыль": finalMargin }; }); const worksheet = XLSX.utils.json_to_sheet(excelData); const workbook = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(workbook, worksheet, "Отчет по рейсам"); const dateStr = new Date().toLocaleDateString('ru-RU').replace(/\./g, '-'); XLSX.writeFile(workbook, `Логистика_Отчет_${dateStr}.xlsx`); }
         function exportTo1C() { let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; csvContent += "НомерРейса;ДатаЗаявки;Клиент;Подрядчик;Маршрут;СтавкаКлиента;СтавкаПодрядчика;Валюта;СтатусОплаты\r\n"; globalOrders.forEach(order => { const row = [ order.id, order.orderDate, `"${order.clientName}"`, `"${order.contractorName}"`, `"${order.route || ''}"`, order.clientRate, order.contractorRate, order.currency || '₽', order.paymentStatus ]; csvContent += row.join(";") + "\r\n"; }); const encodedUri = encodeURI(csvContent); const link = document.createElement("a"); link.setAttribute("href", encodedUri); const dateStr = new Date().toLocaleDateString('ru-RU').replace(/\./g, '-'); link.setAttribute("download", `Export_1C_${dateStr}.csv`); document.body.appendChild(link); link.click(); document.body.removeChild(link); }
 
@@ -480,11 +497,11 @@
         function generateContractorOrder() { const order = globalOrders.find(o => o.id === currentOrderId); if(!order) return; const reqNumber = order.id + 500; const html = `<html><head><meta charset="UTF-8"><title>Заявка №${reqNumber}</title><style>body{font-family:'Arial',sans-serif; padding:40px; color:#000; line-height:1.6; font-size:14px; max-width:800px; margin:auto;} .header{font-size:20px; font-weight:bold; margin-bottom:20px; text-align:center; text-transform:uppercase;} table{width:100%; border-collapse:collapse; margin-top:10px;} th,td{border:1px solid #000; padding:10px; text-align:left;} th{background:#f4f4f4; width:30%;} .sign{display:flex; justify-content:space-between; margin-top:50px;}</style></head><body><div class="header">Договор-заявка на перевозку груза № ${reqNumber}</div><table><tr><th>Дата заявки</th><td>${order.orderDate.split('-').reverse().join('.')}</td></tr><tr><th>Даты загрузки/выгрузки</th><td>${order.loadingDate?order.loadingDate.split('-').reverse().join('.'):'—'} - ${order.unloadingDate?order.unloadingDate.split('-').reverse().join('.'):'—'}</td></tr><tr><th>Заказчик (Экспедитор)</th><td>Наша Транспортная Компания</td></tr><tr><th>Перевозчик (Подрядчик)</th><td>${order.contractorName}</td></tr><tr><th>Автомобиль</th><td>${order.vehicleType||''} ${order.vehicleNumber||''}</td></tr><tr><th>Маршрут движения</th><td>${order.route}</td></tr><tr><th>Ставка за рейс</th><td><b>${Number(order.contractorRate).toLocaleString()} ${order.currency||'₽'}</b></td></tr></table><div class="sign"><div><b>От Заказчика:</b><br><br>_________________ / М.П. /</div><div><b>От Перевозчика:</b><br><br>_________________ / М.П. /</div></div><script>window.print();<\/script></body></html>`; const blob = new Blob([html], { type: 'text/html;charset=utf-8' }); window.open(URL.createObjectURL(blob), '_blank'); closeDocsModal(); }
 
         let voiceRec = null;
-        function openNotesModal(orderId) { currentOrderId = orderId; const order = globalOrders.find(o => o.id === orderId); const tl = document.getElementById('notes-timeline'); tl.innerHTML = ''; if(order.history && order.history.length > 0) { [...order.history].reverse().forEach(h => { const d = new Date(h.date); const formattedDate = `${d.toLocaleDateString('ru-RU')} в ${d.toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'})}`; let contentHtml = `<div class="tl-text">${h.text}</div>`; if (h.fileUrl) { const ext = h.fileUrl.split('.').pop().toLowerCase(); if (['png', 'jpg', 'jpeg', 'webp', 'gif'].includes(ext)) { contentHtml += `<div><a href="${h.fileUrl}" target="_blank"><img src="${h.fileUrl}" class="tl-image-preview"></a></div>`; } else { contentHtml += `<div style="margin-top: 8px;"><a href="${h.fileUrl}" target="_blank" class="btn-small btn-blue" style="text-decoration:none; color:white; display:inline-block; padding: 8px 12px;">📥 Скачать файл</a></div>`; } } tl.innerHTML += `<div class="tl-item"><div class="tl-dot"></div><div class="tl-date">${formattedDate}</div>${contentHtml}</div>`; }); } else { tl.innerHTML = '<div style="color: #666; font-size: 12px;">История пуста. Добавьте первую запись.</div>'; } document.getElementById('n_new_note').value = ''; document.getElementById('notes-modal').style.display = 'flex'; }
+        function openNotesModal(orderId) { currentOrderId = orderId; const order = globalOrders.find(o => o.id === orderId); const tl = document.getElementById('notes-timeline'); tl.innerHTML = ''; if(order.history && order.history.length > 0) { [...order.history].reverse().forEach(h => { const d = new Date(h.date); const formattedDate = `${d.toLocaleDateString('ru-RU')} в ${d.toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'})}`; let contentHtml = `<div class="tl-text">${h.text}</div>`; if (h.fileUrl) { const ext = h.fileUrl.split('.').pop().toLowerCase(); if (['png', 'jpg', 'jpeg', 'webp', 'gif'].includes(ext)) { contentHtml += `<div><a href="${h.fileUrl}" target="_blank"><img src="${h.fileUrl}" class="tl-image-preview"></a></div>`; } else { contentHtml += `<div style="margin-top: 8px;"><a href="${h.fileUrl}" target="_blank" class="btn-small btn-blue" style="text-decoration:none; display:inline-block; padding: 8px 12px; width:auto;">📥 Скачать файл</a></div>`; } } tl.innerHTML += `<div class="tl-item"><div class="tl-dot"></div><div class="tl-date">${formattedDate}</div>${contentHtml}</div>`; }); } else { tl.innerHTML = '<div style="color: var(--text-muted); font-size: 12px;">История пуста. Добавьте первую запись.</div>'; } document.getElementById('n_new_note').value = ''; document.getElementById('notes-modal').style.display = 'flex'; }
         function closeNotesModal() { document.getElementById('notes-modal').style.display = 'none'; if(voiceRec) voiceRec.stop(); }
         function submitNote() { const text = document.getElementById('n_new_note').value.trim(); if(!text) return; fetch(`/api/orders/${currentOrderId}/history`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: text }) }).then(() => { loadOrders(); setTimeout(() => openNotesModal(currentOrderId), 200); }); }
         function startVoiceRecognition() { const btn = document.getElementById('micBtn'); if (voiceRec) { voiceRec.stop(); return; } if(!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) { alert('К сожалению, ваш браузер не поддерживает голосовой ввод.'); return; } const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition; voiceRec = new SpeechRec(); voiceRec.lang = 'ru-RU'; voiceRec.continuous = false; voiceRec.onstart = () => { btn.classList.add('recording'); btn.innerText = '🔴'; }; voiceRec.onresult = (e) => { const input = document.getElementById('n_new_note'); input.value = (input.value + ' ' + e.results[0][0].transcript).trim(); }; voiceRec.onerror = () => { alert('Ошибка микрофона.'); }; voiceRec.onend = () => { btn.classList.remove('recording'); btn.innerText = '🎙️'; voiceRec = null; }; voiceRec.start(); }
-        function uploadFile() { const fileInput = document.getElementById('n_file_upload'); const file = fileInput.files[0]; if(!file) return; const formData = new FormData(); formData.append('document', file); const tl = document.getElementById('notes-timeline'); tl.innerHTML = '<div style="text-align:center; padding:10px; color:#007bff; font-weight:bold;">Загрузка файла... ⏳</div>' + tl.innerHTML; fetch(`/api/orders/${currentOrderId}/history_file`, { method: 'POST', body: formData }).then(res => res.json()).then(data => { if (data.status === 'success') { fileInput.value = ''; loadOrders(); setTimeout(() => openNotesModal(currentOrderId), 300); } else { alert("Ошибка сервера: " + data.message); } }).catch(err => { alert("Сетевая ошибка"); }); }
+        function uploadFile() { const fileInput = document.getElementById('n_file_upload'); const file = fileInput.files[0]; if(!file) return; const formData = new FormData(); formData.append('document', file); const tl = document.getElementById('notes-timeline'); tl.innerHTML = '<div style="text-align:center; padding:10px; color:var(--primary); font-weight:bold;">Загрузка файла... ⏳</div>' + tl.innerHTML; fetch(`/api/orders/${currentOrderId}/history_file`, { method: 'POST', body: formData }).then(res => res.json()).then(data => { if (data.status === 'success') { fileInput.value = ''; loadOrders(); setTimeout(() => openNotesModal(currentOrderId), 300); } else { alert("Ошибка сервера: " + data.message); } }).catch(err => { alert("Сетевая ошибка"); }); }
     </script>
 </body>
 </html>
