@@ -16,8 +16,28 @@ body.dark-theme {
 
 body { font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif; -webkit-font-smoothing: antialiased; background: var(--bg); color: var(--text-main); padding: 20px; margin: 0; font-size: 13px; transition: background 0.4s ease, color 0.4s ease; }
 
+/* =========================================
+   🏢 ШАПКА И ЛОГОТИП (V-SYSTEM BRANDING)
+   ========================================= */
 .app-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid var(--border); padding-bottom: 15px;}
-.brand-title { margin: 0; font-family: 'Montserrat', sans-serif; font-size: 2.2em; color: var(--primary); font-weight: 800; letter-spacing: -1px; text-transform: uppercase; line-height: 1.1; }
+
+/* Тот самый фирменный градиент и шрифт Orbitron */
+.brand-title { 
+    margin: 0; 
+    font-family: 'Orbitron', sans-serif; 
+    font-size: 26px; 
+    font-weight: 900; 
+    text-transform: uppercase; 
+    letter-spacing: 3px; 
+    background: linear-gradient(90deg, #0D9488 0%, #0D9488 18%, #3B82F6 35%, #8B5CF6 50%, #3B82F6 65%, #0D9488 82%, #0D9488 100%); 
+    background-size: 200% auto; 
+    -webkit-background-clip: text; 
+    background-clip: text; 
+    -webkit-text-fill-color: transparent; 
+    animation: v-text-flow 6s linear infinite; 
+    filter: drop-shadow(0 0 10px rgba(13, 148, 136, 0.3));
+}
+@keyframes v-text-flow { 0% { background-position: 0% center; } 100% { background-position: 200% center; } }
 
 .header-controls { display: flex; gap: 10px; align-items: center; }
 .theme-toggle { background: var(--card-bg); border: 1px solid var(--border); border-radius: 50%; width: 44px; height: 44px; font-size: 1.2em; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; box-shadow: 0 2px 5px rgba(0,0,0,0.05); color: var(--text-main); }
@@ -130,6 +150,22 @@ select.status-select { padding: 6px 10px; border-radius: 20px; font-weight: bold
 @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
 .tl-image-preview { max-width: 100%; max-height: 120px; border-radius: 10px; border: 1px solid var(--border); margin-top: 8px; cursor: pointer; }
 
-/* Идентичный фирменный подвал V-SYSTEM */
-.app-footer { text-align: center; margin-top: 40px; padding: 20px 0; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-muted); letter-spacing: 1.5px; font-weight: 700; font-family: 'Montserrat', sans-serif; }
-.app-footer .v-logo { color: var(--v-system); font-weight: 900; margin: 0 4px; }
+/* =========================================
+   ПОДВАЛ (ИДЕНТИЧНЫЙ V-SYSTEM)
+   ========================================= */
+.app-footer { 
+    text-align: center; 
+    margin-top: 40px; 
+    padding: 20px 0; 
+    border-top: 1px solid var(--border); 
+    font-size: 12px; 
+    color: #64748b; 
+    letter-spacing: 2px; 
+    font-weight: 600; 
+    font-family: 'Orbitron', sans-serif; 
+}
+.app-footer .v-logo { 
+    color: var(--v-system); 
+    font-weight: 900; 
+    margin-left: 6px; 
+}
