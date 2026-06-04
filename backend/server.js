@@ -48,8 +48,18 @@ initDB();
 
 app.post('/api/login', (req, res) => {
     const { username, password } = req.body;
-    if (username === 'admin' && password === '12345') res.json({ status: "success", token: "secret-crm-token" });
-    else res.status(401).json({ status: "error", message: "Ошибка" });
+    
+    // Вход для Логиста (работа с системой)
+    if (username === 'logist' && password === '12345') {
+        res.json({ status: "success", token: "token-logist", role: "logist" });
+    } 
+    // Вход для Сисадмина (обслуживание базы)
+    else if (username === 'sysadmin' && password === 'admin') {
+        res.json({ status: "success", token: "token-sysadmin", role: "sysadmin" });
+    } 
+    else {
+        res.status(401).json({ status: "error", message: "Неверный логин или пароль" });
+    }
 });
 
 app.get('/api/orders', async (req, res) => {

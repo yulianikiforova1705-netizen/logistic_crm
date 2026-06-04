@@ -17,19 +17,21 @@ function toggleTheme() {
 initTheme();
 
 // ==========================================
-// 2. АВТОРИЗАЦИЯ
+// 2. АВТОРИЗАЦИЯ И РОЛИ
 // ==========================================
 function checkAuth() { 
     const token = localStorage.getItem('crm_token'); 
     if (token) { 
         document.getElementById('login-screen').style.display = 'none'; 
         document.getElementById('app-content').style.display = 'block'; 
+        applyRolePermissions(); // Скрываем или показываем кнопки
         loadOrders(); 
     } else { 
         document.getElementById('login-screen').style.display = 'flex'; 
         document.getElementById('app-content').style.display = 'none'; 
     } 
 }
+
 function attemptLogin() { 
     const user = document.getElementById('login-username').value; 
     const pass = document.getElementById('login-password').value; 
@@ -42,6 +44,7 @@ function attemptLogin() {
     .then(data => { 
         if (data.status === 'success') { 
             localStorage.setItem('crm_token', data.token); 
+            localStorage.setItem('crm_role', data.role); // Запоминаем роль (sysadmin или logist)
             document.getElementById('login-error').style.display = 'none'; 
             checkAuth(); 
         } else { 
@@ -49,10 +52,24 @@ function attemptLogin() {
         } 
     }); 
 }
+
 function logout() { 
     localStorage.removeItem('crm_token'); 
+    localStorage.removeItem('crm_role'); 
     checkAuth(); 
 }
+
+function applyRolePermissions() {
+    const role = localStorage.getItem('crm_role');
+    const isSysadmin = role === 'sysadmin';
+
+    // Кнопку "💾 JSON" видит ТОЛЬКО сисадмин
+    const btnJson = document.getElementById('btn-json');
+    if (btnJson) {
+        btnJson.style.display = isSysadmin ? 'inline-block' : 'none';
+    }
+}
+
 checkAuth();
 
 // ==========================================
