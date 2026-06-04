@@ -561,3 +561,32 @@ function uploadFile() {
     })
     .catch(err => { alert("Сетевая ошибка"); }); 
 }
+// ==========================================
+// 10. АВТОЗАПОЛНЕНИЕ ПО ИНН (DADATA)
+// ==========================================
+function fetchInn(innFieldId, nameFieldId) {
+    const inn = document.getElementById(innFieldId).value.trim();
+    if (inn.length < 10) return; // ИНН обычно 10 или 12 цифр
+    
+    const nameField = document.getElementById(nameFieldId);
+    nameField.placeholder = 'Ищем в базе ФНС... ⏳';
+    
+    fetch('/api/inn', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ inn: inn })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === 'success') {
+            nameField.value = data.name;
+        } else {
+            alert('Компания с таким ИНН не найдена. Проверьте правильность ввода.');
+        }
+        nameField.placeholder = 'Название...';
+    })
+    .catch(err => {
+        console.error(err);
+        nameField.placeholder = 'Название...';
+    });
+}

@@ -52,8 +52,20 @@
                         <div class="form-group"><label>Дата загрузки</label><input type="date" id="f-loading-date"></div>
                         <div class="form-group"><label>Дата выгрузки</label><input type="date" id="f-unloading-date"></div>
                         
-                        <div class="form-group"><label>Клиент</label><input type="text" id="f-client" list="clients-list" autocomplete="off" required></div>
-                        <div class="form-group"><label>Подрядчик</label><input type="text" id="f-contractor" list="contractors-list" autocomplete="off" required></div>
+                        <div class="form-group">
+                            <label>Клиент (Авто по ИНН)</label>
+                            <div style="display:flex; gap:5px;">
+                                <input type="text" id="f-client-inn" placeholder="ИНН..." style="width: 40%;" onchange="fetchInn('f-client-inn', 'f-client')">
+                                <input type="text" id="f-client" list="clients-list" autocomplete="off" required style="width: 60%;" placeholder="Название...">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Подрядчик (Авто по ИНН)</label>
+                            <div style="display:flex; gap:5px;">
+                                <input type="text" id="f-contractor-inn" placeholder="ИНН..." style="width: 40%;" onchange="fetchInn('f-contractor-inn', 'f-contractor')">
+                                <input type="text" id="f-contractor" list="contractors-list" autocomplete="off" required style="width: 60%;" placeholder="Название...">
+                            </div>
+                        </div>
                         <div class="form-group"><label>Маршрут</label><input type="text" id="f-route" list="routes-list" autocomplete="off" required></div>
                         
                         <div class="form-group"><label>Тип ТС</label>
