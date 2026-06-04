@@ -3,12 +3,34 @@ const path = require('path');
 const { Pool } = require('pg'); 
 const multer = require('multer'); 
 const fs = require('fs');         
+const https = require('https'); 
 
 const app = express();
 const PORT = 3000;
 
-// === ВСТАВЬ СЮДА СВОЮ ССЫЛКУ ИЗ NEON ===
+// === ТВОЯ ССЫЛКА НА БАЗУ ДАННЫХ NEON ===
 const DATABASE_URL = 'postgresql://neondb_owner:npg_ZF8YphcWLGB1@ep-tiny-wave-ald7394w-pooler.c-3.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=requireс';
+
+// === НАСТРОЙКИ TELEGRAM БОТА ===
+const TELEGRAM_TOKEN = '8973776187:AAFCGBEp5ooyphG-coU-Xw8PL4MW9yGcv_Y';
+const TELEGRAM_CHAT_ID = '765319326'; 
+
+// Функция отправки сообщений в Telegram
+function sendTelegramNotification(message) {
+    if (!TELEGRAM_CHAT_ID || TELEGRAM_CHAT_ID.includes('СЮДА')) return;
+    const data = JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: message, parse_mode: 'HTML' });
+    const options = { 
+        hostname: 'api.telegram.org', 
+        port: 443, 
+        path: `/bot${TELEGRAM_TOKEN}/sendMessage`, 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) } 
+    };
+    const req = https.request(options);
+    req.on('error', (e) => console.error("Ошибка Telegram:", e));
+    req.write(data); 
+    req.end();
+}
 
 const pool = new Pool({ connectionString: DATABASE_URL, ssl: { rejectUnauthorized: false } });
 
@@ -26,15 +48,8 @@ app.use('/uploads', express.static(uploadDir));
 
 const initDB = async () => {
     try {
-        await pool.query(`CREATE TABLE IF NOT EXISTS orders ( id SERIAL PRIMARY KEY, order_date DATE NOT NULL, client_name TEXT NOT NULL, contractor_name TEXT NOT NULL, route TEXT, client_rate NUMERIC, contractor_rate NUMERIC, payment_status TEXT DEFAULT 'Ожидание', extra_expenses JSONB DEFAULT '[]' );`);
-        await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS history JSONB DEFAULT '[]'`);
-        await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS trip_status TEXT DEFAULT 'На погрузке'`);
-        await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS loading_date DATE`);
-        await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS unloading_date DATE`);
-        await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS vehicle_type TEXT`);
-        await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS vehicle_number TEXT`);
-        await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS currency TEXT DEFAULT '₽'`);
-        console.log("✅ База данных успешно обновлена новыми полями!");
+        await pool.query(`CREATE TABLE IF NOT EXISTS orders ( id SERIAL PRIMARY KEY, order_date DATE NOT NULL, client_name TEXT NOT NULL, contractor_name TEXT NOT NULL, route TEXT, client_rate NUMERIC, contractor_rate NUMERIC, payment_status TEXT DEFAULT 'Ожидание', extra_expenses JSONB DEFAULT '[]', history JSONB DEFAULT '[]', trip_status TEXT DEFAULT 'На погрузке', loading_date DATE, unloading_date DATE, vehicle_type TEXT, vehicle_number TEXT, currency TEXT DEFAULT '₽' );`);
+        console.log("✅ База данных готова!");
     } catch (err) { console.error("❌ Ошибка базы:", err); }
 };
 initDB();
@@ -49,14 +64,7 @@ app.get('/api/orders', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM orders ORDER BY id DESC');
         const formattedData = result.rows.map(row => ({
-            id: row.id, orderDate: row.order_date.toISOString().split('T')[0], clientName: row.client_name,
-            contractorName: row.contractor_name, route: row.route, clientRate: Number(row.client_rate),
-            contractorRate: Number(row.contractor_rate), paymentStatus: row.payment_status,
-            tripStatus: row.trip_status || 'На погрузке',
-            loadingDate: row.loading_date ? row.loading_date.toISOString().split('T')[0] : '',
-            unloadingDate: row.unloading_date ? row.unloading_date.toISOString().split('T')[0] : '',
-            vehicleType: row.vehicle_type || '', vehicleNumber: row.vehicle_number || '', currency: row.currency || '₽',
-            extraExpenses: row.extra_expenses || [], history: row.history || []
+            id: row.id, orderDate: row.order_date.toISOString().split('T')[0], clientName: row.client_name, contractorName: row.contractor_name, route: row.route, clientRate: Number(row.client_rate), contractorRate: Number(row.contractor_rate), paymentStatus: row.payment_status, tripStatus: row.trip_status || 'На погрузке', loadingDate: row.loading_date ? row.loading_date.toISOString().split('T')[0] : '', unloadingDate: row.unloading_date ? row.unloading_date.toISOString().split('T')[0] : '', vehicleType: row.vehicle_type || '', vehicleNumber: row.vehicle_number || '', currency: row.currency || '₽', extraExpenses: row.extra_expenses || [], history: row.history || []
         }));
         res.json({ status: "success", data: formattedData });
     } catch (err) { res.status(500).json({ status: "error", message: err.message }); }
@@ -71,46 +79,50 @@ app.post('/api/orders', async (req, res) => {
 });
 
 app.put('/api/orders/:id', async (req, res) => { const b = req.body; try { await pool.query('UPDATE orders SET order_date = $1, client_name = $2, contractor_name = $3, route = $4, client_rate = $5, contractor_rate = $6, loading_date = $7, unloading_date = $8, vehicle_type = $9, vehicle_number = $10, currency = $11 WHERE id = $12', [b.orderDate, b.clientName, b.contractorName, b.route, b.clientRate, b.contractorRate, b.loadingDate || null, b.unloadingDate || null, b.vehicleType, b.vehicleNumber, b.currency, req.params.id]); res.json({ status: "success" }); } catch (err) { res.status(500).json({ status: "error", message: err.message }); } });
-app.patch('/api/orders/:id/status', async (req, res) => { try { await pool.query('UPDATE orders SET payment_status = $1 WHERE id = $2', [req.body.status, req.params.id]); res.json({ status: "success" }); } catch (err) { res.status(500).json({ status: "error", message: err.message }); } });
+
+// ОБНОВЛЕНО: Статус оплаты + Telegram
+app.patch('/api/orders/:id/status', async (req, res) => { 
+    try { 
+        await pool.query('UPDATE orders SET payment_status = $1 WHERE id = $2', [req.body.status, req.params.id]); 
+        
+        // Отправка уведомления при просрочке
+        if (req.body.status === 'Просрочка') {
+            sendTelegramNotification(`⚠️ <b>ВНИМАНИЕ: Просрочка!</b>\nРейс #${req.params.id} переведен в статус "Просрочка оплаты".\nТребуется контроль!`);
+        }
+
+        res.json({ status: "success" }); 
+    } catch (err) { res.status(500).json({ status: "error", message: err.message }); } 
+});
+
 app.patch('/api/orders/:id/trip_status', async (req, res) => { try { await pool.query('UPDATE orders SET trip_status = $1 WHERE id = $2', [req.body.status, req.params.id]); await pool.query("UPDATE orders SET history = COALESCE(history, '[]'::jsonb) || $1::jsonb WHERE id = $2", [JSON.stringify([{ date: new Date().toISOString(), text: `🔄 Статус рейса изменен на: ${req.body.status}` }]), req.params.id]); res.json({ status: "success" }); } catch (err) { res.status(500).json({ status: "error", message: err.message }); } });
-app.post('/api/orders/:id/expenses', async (req, res) => { try { await pool.query("UPDATE orders SET extra_expenses = extra_expenses || $1::jsonb WHERE id = $2", [JSON.stringify([{ category: req.body.category, amount: Number(req.body.amount) }]), req.params.id]); res.json({ status: "success" }); } catch (err) { res.status(500).json({ status: "error", message: err.message }); } });
+
+// ОБНОВЛЕНО: Штрафы/расходы + Telegram
+app.post('/api/orders/:id/expenses', async (req, res) => { 
+    try { 
+        await pool.query("UPDATE orders SET extra_expenses = COALESCE(extra_expenses, '[]'::jsonb) || $1::jsonb WHERE id = $2", [JSON.stringify([{ category: req.body.category, amount: Number(req.body.amount) }]), req.params.id]); 
+        
+        // Отправка уведомления при проблемных расходах
+        if (['Штраф', 'Простой', 'Перегруз', 'Опоздание'].includes(req.body.category)) {
+            sendTelegramNotification(`🚨 <b>Утечка бюджета!</b>\nПо рейсу #${req.params.id} добавлен непредвиденный расход:\n<b>${req.body.category}:</b> ${req.body.amount}`);
+        }
+
+        res.json({ status: "success" }); 
+    } catch (err) { res.status(500).json({ status: "error", message: err.message }); } 
+});
+
 app.delete('/api/orders/:id', async (req, res) => { try { await pool.query('DELETE FROM orders WHERE id = $1', [req.params.id]); res.json({ status: "success" }); } catch (err) { res.status(500).json({ status: "error", message: err.message }); } });
 app.post('/api/orders/:id/history', async (req, res) => { try { await pool.query("UPDATE orders SET history = COALESCE(history, '[]'::jsonb) || $1::jsonb WHERE id = $2", [JSON.stringify([{ date: new Date().toISOString(), text: req.body.text }]), req.params.id]); res.json({ status: "success" }); } catch (err) { res.status(500).json({ status: "error", message: err.message }); } });
 app.post('/api/orders/:id/history_file', upload.single('document'), async (req, res) => { try { if (!req.file) throw new Error("Файл не найден"); const fileUrl = '/uploads/' + req.file.filename; await pool.query("UPDATE orders SET history = COALESCE(history, '[]'::jsonb) || $1::jsonb WHERE id = $2", [JSON.stringify([{ date: new Date().toISOString(), text: `📎 Прикреплен документ: ${req.file.originalname}`, fileUrl: fileUrl }]), req.params.id]); res.json({ status: "success", fileUrl }); } catch (err) { res.status(500).json({ status: "error", message: err.message }); } });
 
-// =====================================================================
-// НОВОЕ: Скрытый API-шлюз для автоматической синхронизации с 1С
-// =====================================================================
+// API для 1С
 app.get('/api/1c/sync', async (req, res) => {
-    // 1. Проверяем секретный ключ (Токен)
     const token = req.query.token;
-    if (token !== 'super-secret-1c-token-2026') {
-        return res.status(403).json({ error: "Доступ запрещен. Неверный или отсутствующий токен." });
-    }
-
+    if (token !== 'super-secret-1c-token-2026') return res.status(403).json({ error: "Доступ запрещен." });
     try {
-        // 2. Достаем данные из базы
         const result = await pool.query('SELECT * FROM orders ORDER BY id DESC');
-        
-        // 3. Форматируем так, как удобно 1С (строгие ключи на русском)
-        const formattedData = result.rows.map(row => ({
-            "НомерРейса": row.id,
-            "ДатаЗаявки": row.order_date.toISOString().split('T')[0],
-            "Клиент": row.client_name,
-            "Подрядчик": row.contractor_name,
-            "Маршрут": row.route || "",
-            "СтавкаКлиента": Number(row.client_rate),
-            "СтавкаПодрядчика": Number(row.contractor_rate),
-            "Валюта": row.currency || "₽",
-            "СтатусОплаты": row.payment_status,
-            "СтатусРейса": row.trip_status || "На погрузке"
-        }));
-        
-        // 4. Отдаем результат
+        const formattedData = result.rows.map(row => ({ "НомерРейса": row.id, "ДатаЗаявки": row.order_date.toISOString().split('T')[0], "Клиент": row.client_name, "Подрядчик": row.contractor_name, "Маршрут": row.route || "", "СтавкаКлиента": Number(row.client_rate), "СтавкаПодрядчика": Number(row.contractor_rate), "Валюта": row.currency || "₽", "СтатусОплаты": row.payment_status, "СтатусРейса": row.trip_status || "На погрузке" }));
         res.json(formattedData);
-    } catch (err) { 
-        res.status(500).json({ error: err.message }); 
-    }
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.listen(PORT, () => console.log(`🚀 Сервер запущен на порту ${PORT}`));
